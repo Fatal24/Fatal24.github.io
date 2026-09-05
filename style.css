@@ -1,0 +1,111 @@
+:root {
+    --dark_teal: #075A64;
+    --teal: #69BFAB;
+    --golden: #D4AA3A;
+}
+h1 {
+    padding: 0 25%;
+    font-family: 'Press Start 2P', 'system-ui';
+    color: var(--teal);
+    font-size: 48px;
+    -webkit-text-stroke: 1px var(--dark_teal);
+    line-height: 56px
+}
+.nav-button {
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 4px 2px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+.centre {
+    background-color: #89C0C6;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.slanted-box1 {
+    position: relative;
+    padding: 5% 25%;
+    align-content: center;
+    overflow: hidden;
+    margin: 0;
+    font-family: 'Press Start 2P', 'system-ui';
+    color: white;
+    &::before {
+        content: "";
+        position: absolute;
+        top: 15%;
+        left: 0;
+        width: 100%;
+        height: 85%;
+        z-index: -1;
+        margin: 0;
+        clip-path: polygon(25% 0%, 75% 15%, 75% 85%, 25% 100%);
+        background: var(--teal);
+    }
+}
+
+.slanted-box2 {
+    position: relative;
+    padding: 5% 25%;
+    align-content: center;
+    overflow: hidden;
+    margin: 0;
+    font-family: 'Press Start 2P', 'system-ui';
+    &::before {
+        content: "";
+        position: absolute;
+        top: 10%;
+        left: 0;
+        width: 100%;
+        height: 90%;
+        z-index: -1;
+        margin: 0;
+        clip-path: polygon(25% 85%, 75% 100%, 75% 0%, 25% 15%);
+
+        background: #9e1f5f;
+    }
+}
+.btn {
+    background-color: #FFC60E; /* Blue background */
+    border: none; /* Remove borders */
+    color: white; /* White text */
+    padding: 6px 6px; /* Some padding */
+    font-size: 16px; /* Set a font size */
+    cursor: pointer; /* Mouse pointer on hover */
+    display: inline-block;
+    transition: background-color 0.2s;
+    border-radius: 12px;
+}
+
+/* Darker background on mouse-over */
+.btn:hover {
+    background-color: var(--dark_teal);
+}
+.timeline {
+    overflow-x: scroll;
+
+}
+.header_with_links {
+    display: block;
+    justify-content: space-between;
+    align-items: baseline;
+    overflow: hidden;
+}
+body,html {
+    margin:0;
+    padding:0;
+}
+
+.event_div:after { content: "\00A0"; display: block; clear: both; visibility: hidden; line-height: 0; height: 0;}
+.event_div{ display: inline-block;}
+html[xmlns] .event_div { display: block;}
+* html .event_div{ height: 1%;}
+.event_div {display: block}
