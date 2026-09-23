@@ -20,12 +20,18 @@ const contact = 'yw713@cam.ac.uk';
 
         <h2>What this site collects</h2>
         <p>
-            Very little. There are no accounts, forms, analytics, advertising or tracking, and the site sets no cookies.
+            Very little. There are no accounts, forms, advertising or cross-site tracking, and the site sets no cookies.
         </p>
         <ul>
             <li>
                 <strong>Server logs:</strong> like almost every website, our server records each request's IP address,
                 time and page, to keep the site running and secure. Logs are deleted after 30 days.
+            </li>
+            <li>
+                <strong>Visitor statistics:</strong> we count visits with Umami, which runs on our own server and
+                uses no cookies. It records the page, the site you came from, your browser, device type and rough
+                location (country or city), but not your IP address, and can't identify you. We use it only to see
+                which pages are useful. We respect your browser's Do Not Track setting, and you can opt out below.
             </li>
             <li>
                 <strong>Events list:</strong> loaded from our public Google Calendar. Your browser connects to Google
@@ -37,6 +43,13 @@ const contact = 'yw713@cam.ac.uk';
             </li>
         </ul>
 
+        <h2>Opting out of statistics</h2>
+        <p>
+            <span class="optout-status">Your visits are counted.</span>
+            <button type="button" class="optout">Don't count my visits</button>
+        </p>
+        <p class="note">This choice is saved in this browser only.</p>
+
         <h2>Your rights</h2>
         <p>
             Under UK data protection law you can ask what data we hold about you and have it corrected or deleted.
@@ -46,7 +59,54 @@ const contact = 'yw713@cam.ac.uk';
     </article>
 </Base>
 
+<script>
+    // Umami skips tracking when localStorage has umami.disabled = 1.
+    const KEY = 'umami.disabled';
+    const status = document.querySelector<HTMLElement>('.optout-status')!;
+    const button = document.querySelector<HTMLButtonElement>('.optout')!;
+
+    function render() {
+        let off = false;
+        try {
+            off = localStorage.getItem(KEY) === '1';
+        } catch {}
+        status.textContent = off ? "Your visits aren't counted." : 'Your visits are counted.';
+        button.textContent = off ? 'Count my visits again' : "Don't count my visits";
+    }
+
+    button.addEventListener('click', () => {
+        try {
+            if (localStorage.getItem(KEY) === '1') localStorage.removeItem(KEY);
+            else localStorage.setItem(KEY, '1');
+        } catch {}
+        render();
+    });
+    render();
+</script>
+
 <style>
+    .optout {
+        margin-left: 0.75rem;
+        padding: 0.4rem 0.75rem;
+        border: 2px solid var(--cam-blue);
+        border-radius: 0.5rem;
+        font: inherit;
+        color: var(--cam-blue);
+        background: none;
+        cursor: pointer;
+    }
+
+    .optout:hover,
+    .optout:focus-visible {
+        color: var(--black);
+        background: var(--cam-blue);
+    }
+
+    .note {
+        font-size: 0.6rem;
+        color: #B5BDC8;
+    }
+
     article {
         padding: clamp(1.25rem, 4vw, 2.5rem);
         border-radius: 0.75rem;
