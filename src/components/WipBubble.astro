@@ -1,0 +1,103 @@
+---
+// "WIP, sorry" bubble for unfinished features. Add class="wip" to any link or button and
+// clicking it shows this bubble beside it instead of doing its normal action.
+const base = import.meta.env.BASE_URL;
+---
+
+<!-- Hidden popovers don't load their images, so fetch the drawing up front; otherwise the
+     first click waits for the download before anything shows. -->
+<link rel="preload" as="image" href={`${base}icons/wip.gif`} />
+
+<div id="wip-bubble" popover role="status" style={`--icon: url('${base}icons/wip.gif')`}>
+    <span class="wiggly" aria-hidden="true"></span>
+    <span class="visually-hidden">This is a work in progress. Sorry!</span>
+</div>
+
+<script>
+    const bubble = document.querySelector<HTMLElement>('#wip-bubble')!;
+    const SIZE = 1.25; // bubble height as a multiple of the trigger's height
+    const MIN_WIDTH = 96; // px, so the words stay readable on small triggers
+    const SHOW_MS = 2500; // how long it stays before fading out
+    const ASPECT = 355 / 261; // wip.gif
+
+    let trigger: HTMLElement | null = null;
+    let closedAt = 0;
+    let hideTimer: ReturnType<typeof setTimeout> | undefined;
+
+    // Size the bubble from its trigger, then sit to the trigger's right with the tail
+    // (bottom-left of the drawing) pointing at it, nudged back on screen when there's no room.
+    // offsetWidth/Height ignore the pop-in scale animation.
+    function place() {
+        if (!trigger || !bubble.matches(':popover-open')) return;
+        const target = trigger.getBoundingClientRect();
+        bubble.style.width = `${Math.max(target.height * SIZE * ASPECT, MIN_WIDTH)}px`;
+        const margin = 8;
+        const left = Math.min(target.right, innerWidth - bubble.offsetWidth - margin);
+        const top = Math.max(target.top + target.height / 2 - bubble.offsetHeight * 0.9, margin);
+        bubble.style.left = `${left + scrollX}px`;
+        bubble.style.top = `${top + scrollY}px`;
+    }
+
+    document.addEventListener('click', (event) => {
+        const target = (event.target as Element).closest<HTMLElement>('.wip');
+        if (!target) return;
+        event.preventDefault();
+        // Clicking the same button again closes it: the outside click already closed the bubble.
+        if (target === trigger && Date.now() - closedAt < 300) return;
+        trigger = target;
+        bubble.classList.remove('leaving');
+        if (!bubble.matches(':popover-open')) bubble.showPopover();
+        place();
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => {
+            bubble.classList.add('leaving');
+            hideTimer = setTimeout(() => bubble.hidePopover(), 300);
+        }, SHOW_MS);
+    });
+
+    bubble.addEventListener('toggle', (event) => {
+        if ((event as ToggleEvent).newState !== 'closed') return;
+        closedAt = Date.now();
+        clearTimeout(hideTimer);
+        bubble.classList.remove('leaving');
+    });
+    addEventListener('resize', place);
+</script>
+
+<style>
+    /* A popover, so it sits in the top layer above everything. Click elsewhere or press Esc to close. */
+    #wip-bubble {
+        position: absolute;
+        inset: auto;
+        aspect-ratio: 355 / 261;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        background: none;
+        overflow: visible;
+        filter: drop-shadow(3px 3px 0 var(--indigo));
+        transition: opacity 0.3s;
+    }
+
+    #wip-bubble.leaving {
+        opacity: 0;
+    }
+
+    #wip-bubble:popover-open {
+        display: grid;
+        animation: pop 0.15s ease-out;
+    }
+
+    #wip-bubble::backdrop {
+        background: none;
+    }
+
+    @keyframes pop {
+        from { scale: 0.7; }
+    }
+
+    .wiggly {
+        background-color: var(--cam-blue);
+        mask: var(--icon) center / contain no-repeat;
+    }
+</style>

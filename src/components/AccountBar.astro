@@ -1,0 +1,100 @@
+---
+// Top-right account area. Pages are mostly static, so it asks /api/me who is signed in.
+const base = import.meta.env.BASE_URL;
+
+// Until Nevar's signing key arrives, the Raven button shows the "WIP, sorry" bubble
+// (see WipBubble.astro). Set to true to send it to the real login instead.
+const loginReady = false;
+---
+
+<div class="account" data-state="loading">
+    <a
+        class:list={['raven', { wip: !loginReady }]}
+        href={base + 'login'}
+        aria-label={loginReady ? 'Log in with your University Account (Raven)' : 'Log in with your University Account (Raven), coming soon'}
+        title={loginReady ? 'Log in with your University Account (Raven)' : 'Member login: coming soon'}
+        style={`--icon: url('${base}icons/raven.gif')`}
+    >
+        <span class="wiggly" aria-hidden="true"></span>
+    </a>
+    <div class="signed-in">
+        <span class="hello">Hello, <span class="who"></span>!</span>
+        <a class="link" href={base + 'members'}>Members</a>
+        <form method="post" action={base + 'logout'}>
+            <button class="link" type="submit">Log out</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    const account = document.querySelector<HTMLElement>('.account')!;
+    const who = account.querySelector<HTMLElement>('.who')!;
+
+    try {
+        const response = await fetch(`${import.meta.env.BASE_URL}api/me`, { credentials: 'same-origin' });
+        const me = response.ok ? await response.json() : null;
+        if (me?.signedIn) {
+            who.textContent = me.firstName ?? me.crsid;
+            account.dataset.state = 'signed-in';
+        } else {
+            account.dataset.state = 'signed-out';
+        }
+    } catch {
+        account.dataset.state = 'signed-out';
+    }
+
+</script>
+
+<style>
+    .account {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        min-height: 4.5rem;
+        margin-bottom: 1rem;
+        font-size: 0.75rem;
+    }
+
+    .raven,
+    .signed-in {
+        display: none;
+    }
+
+    [data-state='signed-out'] .raven {
+        display: grid;
+    }
+
+    [data-state='signed-in'] .signed-in {
+        display: flex;
+    }
+
+    /* Same hand-drawn mask treatment as the social icons. */
+    .raven {
+        height: clamp(3.5rem, 8vw, 4.5rem);
+        aspect-ratio: 355 / 261;
+        filter: drop-shadow(3px 3px 0 var(--indigo));
+        transition: scale 0.2s, filter 0.2s;
+    }
+
+    .raven:hover,
+    .raven:focus-visible {
+        scale: 1.1;
+        filter: drop-shadow(3px 3px 0 var(--indigo)) drop-shadow(0 0 0.6rem rgb(255 255 255 / 0.5));
+    }
+
+    .raven:focus-visible {
+        outline: 3px solid white;
+        outline-offset: 4px;
+    }
+
+    .wiggly {
+        background-color: var(--cam-blue);
+        mask: var(--icon) center / contain no-repeat;
+        transition: background-color 0.2s;
+    }
+
+    .raven:hover .wiggly,
+    .raven:focus-visible .wiggly {
+        background-color: white;
+    }
+</style>

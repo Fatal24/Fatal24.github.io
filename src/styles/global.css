@@ -1,7 +1,19 @@
+/* Palette: University of Cambridge brand colours
+   (https://www.cam.ac.uk/brand-resources/guidelines/colour) on an esports black base.
+   Cambridge Blue leads; Dark Blue is only for accents (shadows, outlines), per the guidelines.
+   Indigo is the secondary colour. White text fails on Cambridge Blue (1.4:1), so blue surfaces
+   take --black text; white on Indigo passes (4.8:1). */
 :root {
-    --dark_teal: #075A64;
-    --teal: #69BFAB;
-    --magenta: #9e1f5f;
+    --cam-blue: #8EE8D8;
+    --cam-light-blue: #D1F9F1;
+    --cam-warm-blue: #00BDB6;
+    --cam-dark-blue: #133844;
+
+    --indigo: #5366E0;
+    --dark-indigo: #29347A;
+
+    --black: #0E1116;
+    /* Darkest tone of the pixel-art sky, shown behind it while it loads. */
     --night: #0b1a2c;
 
     --page-width: 60rem;
@@ -41,7 +53,25 @@ body::before {
 }
 
 .page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
     width: min(100% - 2 * var(--gutter), var(--page-width));
     margin-inline: auto;
-    padding-block: clamp(1.5rem, 5vw, 3rem);
+    padding-block: clamp(1.5rem, 5vw, 3rem) 1rem;
+}
+
+/* Main content grows so the footer sits at the bottom of short pages. */
+.page > main {
+    flex: 1;
+}
+
+/* Hidden on screen but still read by screen readers. */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
 }

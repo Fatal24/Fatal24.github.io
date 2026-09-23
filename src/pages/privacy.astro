@@ -1,0 +1,122 @@
+---
+import Base from '../layouts/Base.astro';
+
+// Items marked TODO need a committee decision before launch; they are highlighted on the page.
+const updated = '23 September 2026';
+---
+
+<Base title="Privacy notice | CUDGS">
+    <article>
+        <h1>Privacy notice</h1>
+        <p class="updated">Last updated {updated}</p>
+
+        <h2>Who we are</h2>
+        <p>
+            This website is run by the Cambridge University Digital Gaming Society (CUDGS), a student society.
+            CUDGS is the data controller for the personal data described here. Contact the committee at
+            <mark>TODO: society email address</mark>.
+        </p>
+
+        <h2>Logging in</h2>
+        <p>
+            You can log in with your University of Cambridge account. Logins go through Nevar, a service run by the
+            Student-Run Computing Facility (SRCF). We receive only your CRSid and whether you are a current member of
+            the University. We never see your password. SRCF's own privacy information is on srcf.net.
+        </p>
+
+        <h2>Membership records</h2>
+        <p>
+            For each member, the committee keeps your name, CRSid, membership type and the date your membership ends,
+            in a private Google Sheet that only the committee and this website can read. When you log in, the website
+            reads your row to show your membership and members-only content.
+        </p>
+        <p>
+            We use this data to run your membership, which is part of our agreement with you (UK GDPR Article 6(1)(b)).
+            We keep it until <mark>TODO: e.g. one year after your membership ends</mark>, then delete it.
+        </p>
+
+        <h2>Cookies</h2>
+        <p>
+            When you log in we set one cookie, <code>cudgs_session</code>, which keeps you logged in for up to 7 days
+            or until you log out. It contains your CRSid and a security signature, nothing else. It is strictly
+            necessary for logging in, so it doesn't need your consent. We don't use analytics, advertising or
+            tracking cookies.
+        </p>
+
+        <h2>Other services this site uses</h2>
+        <ul>
+            <li>
+                <strong>Hosting:</strong> the site is hosted by <mark>TODO: hosting provider</mark>, which keeps
+                standard server logs (your IP address and the pages you request) for
+                <mark>TODO: log retention period</mark> to keep the site secure.
+            </li>
+            <li>
+                <strong>Events list:</strong> loaded from Baserow (baserow.io, based in the EU). Your browser connects
+                to Baserow directly, so Baserow sees your IP address. Event images may be loaded from other websites.
+            </li>
+            <li>
+                <strong>Google:</strong> stores the membership sheet. Google may process data outside the UK under the
+                safeguards in its data processing terms.
+            </li>
+            <li>
+                <strong>Instagram and Discord:</strong> only if you follow our links; their own privacy policies apply.
+            </li>
+        </ul>
+        <p>We never sell your data or share it for marketing.</p>
+
+        <h2>Your rights</h2>
+        <p>
+            Under UK data protection law you can ask to see the data we hold about you, have it corrected or deleted,
+            object to or restrict how we use it, or receive a copy. Contact the committee to do any of these. If you're
+            unhappy with how we've handled your data, you can complain to the Information Commissioner's Office at
+            <a href="https://ico.org.uk/make-a-complaint/">ico.org.uk</a> or on 0303 123 1113.
+        </p>
+    </article>
+</Base>
+
+<style>
+    article {
+        padding: clamp(1.25rem, 4vw, 2.5rem);
+        border-radius: 0.75rem;
+        font-size: 0.75rem;
+        line-height: 2;
+        background: rgb(14 17 22 / 0.9);
+    }
+
+    h1 {
+        margin: 0;
+        font-size: clamp(1.2rem, 0.9rem + 1.5vw, 2rem);
+        color: var(--cam-blue);
+        text-shadow: 3px 3px 0 var(--cam-dark-blue);
+    }
+
+    h2 {
+        margin: 2rem 0 0.5rem;
+        font-size: 0.9rem;
+        color: var(--cam-blue);
+    }
+
+    .updated {
+        color: #B5BDC8;
+    }
+
+    p,
+    ul {
+        margin: 0 0 1rem;
+    }
+
+    li + li {
+        margin-top: 0.5rem;
+    }
+
+    a {
+        color: var(--cam-blue);
+    }
+
+    /* Highlights details the committee still has to fill in. */
+    mark {
+        padding: 0 0.3rem;
+        color: var(--black);
+        background: var(--cam-blue);
+    }
+</style>

@@ -1,0 +1,44 @@
+---
+const base = import.meta.env.BASE_URL;
+const year = new Date().getFullYear();
+---
+
+<footer>
+    <nav aria-label="Footer">
+        <a href={base}>Home</a>
+        <a href={base + 'members'}>Members</a>
+        <a href={base + 'privacy'}>Privacy notice</a>
+    </nav>
+    <p>
+        © {year} Cambridge University Digital Gaming Society. Logo, artwork and icons are original
+        works of the society; all rights reserved. CUDGS is a student society, independent of the
+        University of Cambridge. Instagram and Discord are trademarks of their owners. Font: Press
+        Start 2P by CodeMan38 (SIL OFL 1.1).
+    </p>
+</footer>
+
+<style>
+    footer {
+        margin-top: clamp(2.5rem, 8vw, 5rem);
+        padding-top: 0.75rem;
+        border-top: 1px solid rgb(181 189 200 / 0.25);
+        font-size: 0.5rem;
+        line-height: 2;
+        color: #B5BDC8; /* Cambridge Slate 2 */
+    }
+
+    nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem 1.25rem;
+    }
+
+    a {
+        color: var(--cam-blue);
+    }
+
+    p {
+        margin: 0.25rem 0 0;
+        max-width: 70ch;
+    }
+</style>

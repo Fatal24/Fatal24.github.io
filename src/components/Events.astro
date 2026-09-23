@@ -131,7 +131,7 @@ const fallback = await getImage({ src: fallbackSrc, width: 800, format: 'webp' }
         overflow-x: auto;
         scroll-snap-type: x mandatory;
         scroll-behavior: smooth;
-        scrollbar-color: var(--dark_teal) transparent;
+        scrollbar-color: var(--black) transparent;
     }
 
     .status {
@@ -146,12 +146,13 @@ const fallback = await getImage({ src: fallbackSrc, width: 800, format: 'webp' }
         gap: 0.6rem;
         padding: 0.75rem;
         border-radius: 0.75rem;
-        background: var(--dark_teal);
+        color: white;
+        background: var(--black);
         outline: none;
     }
 
     .card:focus-visible {
-        box-shadow: 0 0 0 3px white;
+        box-shadow: 0 0 0 3px var(--indigo);
     }
 
     .media {
@@ -175,7 +176,7 @@ const fallback = await getImage({ src: fallbackSrc, width: 800, format: 'webp' }
         padding: 0.75rem;
         overflow-y: auto;
         font-size: 0.7em;
-        background: rgb(7 90 100 / 0.92);
+        background: rgb(14 17 22 / 0.92);
         opacity: 0;
         transition: opacity 0.2s;
     }
@@ -231,7 +232,7 @@ const fallback = await getImage({ src: fallbackSrc, width: 800, format: 'webp' }
         border: 0;
         border-radius: 50%;
         color: white;
-        background: rgb(7 90 100 / 0.85);
+        background: rgb(14 17 22 / 0.85);
         cursor: pointer;
         transform: translateY(-50%);
         transition: background-color 0.2s, opacity 0.2s;
@@ -242,7 +243,7 @@ const fallback = await getImage({ src: fallbackSrc, width: 800, format: 'webp' }
     }
 
     .arrow:hover {
-        background: var(--magenta);
+        background: var(--indigo);
     }
 
     .arrow:disabled {

@@ -1,0 +1,21 @@
+---
+import Base from '../../layouts/Base.astro';
+import SlantedSection from '../../components/SlantedSection.astro';
+---
+
+<Base title="Login problem | CUDGS">
+    <SlantedSection title="Login didn't work">
+        <p>We couldn't sign you in. Only current University of Cambridge students and staff can log in.</p>
+        <p><a href={import.meta.env.BASE_URL + 'login'}>Try again</a> or <a href={import.meta.env.BASE_URL}>go home</a>.</p>
+    </SlantedSection>
+</Base>
+
+<style>
+    p {
+        margin: 0 0 0.75rem;
+    }
+
+    a {
+        color: inherit;
+    }
+</style>

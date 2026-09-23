@@ -1,0 +1,104 @@
+---
+import Base from '../layouts/Base.astro';
+import SlantedSection from '../components/SlantedSection.astro';
+import { findMember, type Member } from '../lib/members.ts';
+import { joinUrl, perks } from '../data/perks.ts';
+
+export const prerender = false;
+
+const { crsid } = Astro.locals;
+if (!crsid) return Astro.redirect('/login?return=/members');
+
+let member: Member | null = null;
+let lookupFailed = false;
+try {
+    member = await findMember(crsid);
+} catch (error) {
+    console.error('Members lookup failed:', error);
+    lookupFailed = true;
+}
+
+Astro.response.headers.set('Cache-Control', 'private, no-store');
+
+const formatDate = (date: Date) => date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+const visiblePerks = member?.active ? perks.filter((perk) => !perk.tiers || perk.tiers.includes(member!.tier)) : [];
+---
+
+<Base title="Members | CUDGS">
+    <h1>Members</h1>
+
+    <SlantedSection title="Your membership">
+        {lookupFailed && <p>We couldn't check the membership list just now. Please try again in a few minutes.</p>}
+
+        {!lookupFailed && !member && (
+            <>
+                <p>We couldn't find a CUDGS membership for <strong>{crsid}</strong>.</p>
+                {joinUrl ? <p><a href={joinUrl}>Become a member</a></p> : <p>Ask the committee on Discord about joining.</p>}
+            </>
+        )}
+
+        {member?.active && (
+            <dl>
+                <dt>Type</dt>
+                <dd>{member.tier}</dd>
+                <dt>Valid until</dt>
+                <dd>{member.expires ? formatDate(member.expires) : 'No expiry'}</dd>
+            </dl>
+        )}
+
+        {member && !member.active && (
+            <>
+                <p>Your {member.tier} membership ended on {formatDate(member.expires!)}.</p>
+                {joinUrl && <p><a href={joinUrl}>Renew your membership</a></p>}
+            </>
+        )}
+    </SlantedSection>
+
+    {visiblePerks.length > 0 && (
+        <SlantedSection title="Perks" variant="indigo">
+            {visiblePerks.map((perk) => (
+                <article>
+                    <h3>{perk.title}</h3>
+                    <p>{perk.body}</p>
+                </article>
+            ))}
+        </SlantedSection>
+    )}
+</Base>
+
+<style>
+    h1 {
+        margin: 0 0 1rem;
+        font-size: clamp(1.4rem, 0.9rem + 2.5vw, 3rem);
+        color: var(--cam-blue);
+        text-shadow: 3px 3px 0 var(--cam-dark-blue);
+    }
+
+    p {
+        margin: 0 0 0.75rem;
+    }
+
+    a {
+        color: inherit;
+    }
+
+    dl {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 0.75rem 1.5rem;
+        margin: 0;
+    }
+
+    dd {
+        margin: 0;
+    }
+
+    article + article {
+        margin-top: 1.5rem;
+    }
+
+    h3 {
+        margin: 0 0 0.5rem;
+        font-size: 0.9rem;
+    }
+</style>
