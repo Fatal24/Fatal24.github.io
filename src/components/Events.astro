@@ -1,8 +1,8 @@
 ---
 import { getImage } from 'astro:assets';
-import fallbackSrc from '../assets/event-fallback.jpg';
+import fallbackSrc from '../assets/photos/varsity-2025-redbull.jpg';
 
-// The original is a 6144px, 3.9 MB photo; ship a small webp instead.
+// Picture for events without their own "Image:" line, resized to a small webp.
 const fallback = await getImage({ src: fallbackSrc, width: 800, format: 'webp' });
 ---
 

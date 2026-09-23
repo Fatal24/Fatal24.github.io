@@ -1,8 +1,10 @@
 ---
 import Base from '../layouts/Base.astro';
 
-// Items marked TODO need a committee decision before launch; they are highlighted on the page.
+// Describe only what the site actually does. When member login goes live, add sections for
+// the University login, the membership records and the login cookie before switching it on.
 const updated = '23 September 2026';
+const contact = 'yw713@cam.ac.uk';
 ---
 
 <Base title="Privacy notice | CUDGS">
@@ -12,64 +14,34 @@ const updated = '23 September 2026';
 
         <h2>Who we are</h2>
         <p>
-            This website is run by the Cambridge University Digital Gaming Society (CUDGS), a student society.
-            CUDGS is the data controller for the personal data described here. Contact the committee at
-            <mark>TODO: society email address</mark>.
+            This website is run by the Cambridge University Digital Gaming Society (CUDGS), a student society, which
+            is responsible for any personal data described here. Contact us at <a href={`mailto:${contact}`}>{contact}</a>.
         </p>
 
-        <h2>Logging in</h2>
+        <h2>What this site collects</h2>
         <p>
-            You can log in with your University of Cambridge account. Logins go through Nevar, a service run by the
-            Student-Run Computing Facility (SRCF). We receive only your CRSid and whether you are a current member of
-            the University. We never see your password. SRCF's own privacy information is on srcf.net.
+            Very little. There are no accounts, forms, analytics, advertising or tracking, and the site sets no cookies.
         </p>
-
-        <h2>Membership records</h2>
-        <p>
-            For each member, the committee keeps your name, CRSid, membership type and the date your membership ends,
-            in a private Google Sheet that only the committee and this website can read. When you log in, the website
-            reads your row to show your membership and members-only content.
-        </p>
-        <p>
-            We use this data to run your membership, which is part of our agreement with you (UK GDPR Article 6(1)(b)).
-            We keep it until <mark>TODO: e.g. one year after your membership ends</mark>, then delete it.
-        </p>
-
-        <h2>Cookies</h2>
-        <p>
-            When you log in we set one cookie, <code>cudgs_session</code>, which keeps you logged in for up to 7 days
-            or until you log out. It contains your CRSid and a security signature, nothing else. It is strictly
-            necessary for logging in, so it doesn't need your consent. We don't use analytics, advertising or
-            tracking cookies.
-        </p>
-
-        <h2>Other services this site uses</h2>
         <ul>
             <li>
-                <strong>Hosting:</strong> the site is hosted by <mark>TODO: hosting provider</mark>, which keeps
-                standard server logs (your IP address and the pages you request) for
-                <mark>TODO: log retention period</mark> to keep the site secure.
+                <strong>Server logs:</strong> like almost every website, our server records each request's IP address,
+                time and page, to keep the site running and secure. Logs are deleted after 30 days.
             </li>
             <li>
                 <strong>Events list:</strong> loaded from our public Google Calendar. Your browser connects to Google
-                directly, so Google sees your IP address. Event images may be loaded from other websites.
+                directly, so Google receives your IP address, under Google's privacy policy.
             </li>
             <li>
-                <strong>Google:</strong> stores the membership sheet. Google may process data outside the UK under the
-                safeguards in its data processing terms.
-            </li>
-            <li>
-                <strong>Instagram and Discord links:</strong> if you follow them, their own privacy policies apply.
+                <strong>Links:</strong> Instagram, Discord and supporters' websites have their own privacy policies,
+                which apply once you follow a link.
             </li>
         </ul>
-        <p>We never sell your data or share it for marketing.</p>
 
         <h2>Your rights</h2>
         <p>
-            Under UK data protection law you can ask to see the data we hold about you, have it corrected or deleted,
-            object to or restrict how we use it, or receive a copy. Contact the committee to do any of these. If you're
-            unhappy with how we've handled your data, you can complain to the Information Commissioner's Office at
-            <a href="https://ico.org.uk/make-a-complaint/">ico.org.uk</a> or on 0303 123 1113.
+            Under UK data protection law you can ask what data we hold about you and have it corrected or deleted.
+            Email us to do this. If you're unhappy with how we've handled your data, you can complain to the
+            Information Commissioner's Office at <a href="https://ico.org.uk/make-a-complaint/">ico.org.uk</a>.
         </p>
     </article>
 </Base>
@@ -111,12 +83,5 @@ const updated = '23 September 2026';
 
     a {
         color: var(--cam-blue);
-    }
-
-    /* Highlights details the committee still has to fill in. */
-    mark {
-        padding: 0 0.3rem;
-        color: var(--black);
-        background: var(--cam-blue);
     }
 </style>
