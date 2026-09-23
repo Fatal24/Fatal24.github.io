@@ -1,0 +1,265 @@
+---
+import { getImage } from 'astro:assets';
+import fallbackSrc from '../assets/event-fallback.jpg';
+
+// The original is a 6144px, 3.9 MB photo; ship a small webp instead.
+const fallback = await getImage({ src: fallbackSrc, width: 800, format: 'webp' });
+---
+
+<div class="carousel" data-fallback={fallback.src}>
+    <button class="arrow prev" type="button" aria-label="Previous events" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
+    </button>
+    <ul class="track" aria-live="polite">
+        <li class="status">Loading events…</li>
+    </ul>
+    <button class="arrow next" type="button" aria-label="Next events" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6" /></svg>
+    </button>
+</div>
+
+<template id="event-card">
+    <li class="card" tabindex="0">
+        <div class="media">
+            <img alt="" loading="lazy" decoding="async" />
+            <p class="description"></p>
+        </div>
+        <h3 class="name"></h3>
+        <div class="chips">
+            <span class="chip">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M3 10h18M8 2v4M16 2v4" /></svg>
+                <span class="date"></span>
+            </span>
+            <span class="chip">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                <span class="time"></span>
+            </span>
+            <span class="chip">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></svg>
+                <span class="location"></span>
+            </span>
+        </div>
+    </li>
+</template>
+
+<script>
+    const HOUR = 1000 * 60 * 60;
+
+    // Set in .env locally and as the BASEROW_TOKEN secret in GitHub Actions.
+    const token = import.meta.env.PUBLIC_BASEROW_TOKEN;
+    const tableId = 1173862;
+    const url = `https://api.baserow.io/api/database/rows/table/${tableId}/?user_field_names=true&order_by=Date`;
+
+    type EventRow = {
+        'Event Name': string;
+        Date: string;
+        Location: string | null;
+        Description: string | null;
+        'Image URL': string | null;
+    };
+
+    const carousel = document.querySelector<HTMLElement>('.carousel')!;
+    const track = carousel.querySelector<HTMLUListElement>('.track')!;
+    const prev = carousel.querySelector<HTMLButtonElement>('.prev')!;
+    const next = carousel.querySelector<HTMLButtonElement>('.next')!;
+    const template = document.querySelector<HTMLTemplateElement>('#event-card')!;
+
+    function showStatus(message: string) {
+        const li = document.createElement('li');
+        li.className = 'status';
+        li.textContent = message;
+        track.replaceChildren(li);
+    }
+
+    function renderCard(event: EventRow) {
+        const card = template.content.firstElementChild!.cloneNode(true) as HTMLElement;
+        const date = new Date(event.Date);
+        const img = card.querySelector('img')!;
+        img.src = event['Image URL'] || carousel.dataset.fallback!;
+        img.addEventListener('error', () => { img.src = carousel.dataset.fallback!; }, { once: true });
+        card.querySelector('.name')!.textContent = event['Event Name'];
+        card.querySelector('.date')!.textContent = date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+        card.querySelector('.time')!.textContent = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        card.querySelector('.location')!.textContent = event.Location || 'TBC';
+        const description = card.querySelector('.description')!;
+        if (event.Description) description.textContent = event.Description;
+        else description.remove();
+        return card;
+    }
+
+    function updateArrows() {
+        const overflowing = track.scrollWidth > track.clientWidth + 1;
+        prev.hidden = next.hidden = !overflowing;
+        prev.disabled = track.scrollLeft <= 1;
+        next.disabled = track.scrollLeft + track.clientWidth >= track.scrollWidth - 1;
+    }
+
+    const step = () => track.clientWidth * 0.8;
+    prev.addEventListener('click', () => track.scrollBy({ left: -step(), behavior: 'smooth' }));
+    next.addEventListener('click', () => track.scrollBy({ left: step(), behavior: 'smooth' }));
+    track.addEventListener('scroll', updateArrows, { passive: true });
+    new ResizeObserver(updateArrows).observe(track);
+
+    try {
+        if (!token) throw new Error('PUBLIC_BASEROW_TOKEN is not set');
+        const response = await fetch(url, { headers: { Authorization: `Token ${token}` } });
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const data: { results: EventRow[] } = await response.json();
+        const now = Date.now();
+        // Keep an event listed until 8 hours after it starts.
+        const upcoming = data.results.filter((event) => new Date(event.Date).getTime() + 8 * HOUR > now);
+        if (upcoming.length === 0) showStatus('No upcoming events right now. Check the Discord for news!');
+        else track.replaceChildren(...upcoming.map(renderCard));
+    } catch (error) {
+        console.error('Error:', error);
+        showStatus("Couldn't load events. Check the Discord for what's on!");
+    }
+    updateArrows();
+</script>
+
+<style>
+    .carousel {
+        position: relative;
+    }
+
+    .track {
+        display: flex;
+        gap: 1rem;
+        margin: 0;
+        padding: 0.25rem 0 1rem;
+        list-style: none;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        scroll-behavior: smooth;
+        scrollbar-color: var(--dark_teal) transparent;
+    }
+
+    .status {
+        padding: 1rem 0;
+    }
+
+    .card {
+        flex: 0 0 min(85%, 18rem);
+        scroll-snap-align: start;
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+        padding: 0.75rem;
+        border-radius: 0.75rem;
+        background: var(--dark_teal);
+        outline: none;
+    }
+
+    .card:focus-visible {
+        box-shadow: 0 0 0 3px white;
+    }
+
+    .media {
+        position: relative;
+        aspect-ratio: 16 / 9;
+        overflow: hidden;
+        border-radius: 0.5rem;
+    }
+
+    .media img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .description {
+        position: absolute;
+        inset: 0;
+        margin: 0;
+        padding: 0.75rem;
+        overflow-y: auto;
+        font-size: 0.7em;
+        background: rgb(7 90 100 / 0.92);
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+
+    .card:hover .description,
+    .card:focus-within .description {
+        opacity: 1;
+    }
+
+    .name {
+        margin: 0;
+        font-size: 0.9em;
+        line-height: 1.5;
+    }
+
+    .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        font-size: 0.7em;
+    }
+
+    .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.3rem 0.55rem;
+        border-radius: 0.4rem;
+        background: rgb(255 255 255 / 0.15);
+        white-space: nowrap;
+    }
+
+    svg {
+        width: 1.1em;
+        height: 1.1em;
+        flex: none;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .arrow {
+        position: absolute;
+        top: 50%;
+        z-index: 1;
+        display: grid;
+        place-items: center;
+        width: 2.5rem;
+        height: 2.5rem;
+        padding: 0;
+        border: 0;
+        border-radius: 50%;
+        color: white;
+        background: rgb(7 90 100 / 0.85);
+        cursor: pointer;
+        transform: translateY(-50%);
+        transition: background-color 0.2s, opacity 0.2s;
+    }
+
+    .arrow[hidden] {
+        display: none;
+    }
+
+    .arrow:hover {
+        background: var(--magenta);
+    }
+
+    .arrow:disabled {
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .arrow svg {
+        width: 1.4rem;
+        height: 1.4rem;
+    }
+
+    .prev {
+        left: 0.5rem;
+    }
+
+    .next {
+        right: 0.5rem;
+    }
+</style>

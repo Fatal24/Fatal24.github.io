@@ -1,0 +1,43 @@
+---
+interface Props {
+    title: string;
+    variant?: 'teal' | 'magenta';
+}
+
+const { title, variant = 'teal' } = Astro.props;
+---
+
+<section class:list={['slanted', variant]}>
+    <h2>{title}</h2>
+    <slot />
+</section>
+
+<style>
+    .slanted {
+        position: relative;
+        margin-block: clamp(1.5rem, 4vw, 2.5rem);
+        /* Vertical padding clears the slanted edges; horizontal padding keeps text off the sides. */
+        padding: calc(var(--slant) + clamp(1.25rem, 3vw, 2rem)) clamp(1.25rem, 4vw, 2.5rem);
+    }
+
+    .teal {
+        background: var(--teal);
+        clip-path: polygon(0 0, 100% var(--slant), 100% calc(100% - var(--slant)), 0 100%);
+    }
+
+    .magenta {
+        background: var(--magenta);
+        clip-path: polygon(0 var(--slant), 100% 0, 100% 100%, 0 calc(100% - var(--slant)));
+    }
+
+    h2 {
+        margin: 0 0 1rem;
+        font-size: clamp(1rem, 0.8rem + 1vw, 1.5rem);
+        line-height: 1.4;
+        text-shadow: 2px 2px 0 var(--dark_teal);
+    }
+
+    .magenta h2 {
+        text-shadow: 2px 2px 0 #4a0d2c;
+    }
+</style>
