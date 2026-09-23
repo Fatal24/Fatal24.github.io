@@ -1,0 +1,106 @@
+---
+import { sponsorInfo } from '../data/sponsors.ts';
+
+// Every image in src/assets/sponsors/ is included automatically, in filename order.
+const files = import.meta.glob<string>('../assets/sponsors/*.{png,jpg,jpeg,webp,gif,svg}', {
+    eager: true,
+    query: '?url',
+    import: 'default',
+});
+const sponsors = Object.entries(files)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([path, src]) => {
+        const file = path.split('/').pop()!;
+        return { src, ...(sponsorInfo[file] ?? { name: file.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ') }) };
+    });
+
+// Repeat the logos until one lap is wide enough to fill the screen, then render that lap twice
+// so the scroll can loop seamlessly by sliding exactly one lap (-50%).
+const lap = sponsors.length ? Array.from({ length: Math.ceil(8 / sponsors.length) }, () => sponsors).flat() : [];
+const duration = `${lap.length * 3}s`;
+---
+
+{sponsors.length > 0 && (
+    <section class="supporters" aria-labelledby="supporters-heading">
+        <h2 id="supporters-heading">Supported by:</h2>
+        <div class="marquee">
+            <ul class="track" style={`--duration: ${duration}`}>
+                {[0, 1].map((copy) =>
+                    lap.map(({ name, url, src }, i) => {
+                        // Only the first appearance of each sponsor is announced or focusable.
+                        const hidden = copy === 1 || i >= sponsors.length;
+                        const logo = <img src={src} alt={hidden ? '' : name} loading="lazy" />;
+                        return (
+                            <li aria-hidden={hidden ? 'true' : undefined}>
+                                {url
+                                    ? <a href={url} title={`${name} (opens in a new tab)`} target="_blank" rel="noopener" tabindex={hidden ? -1 : undefined}>{logo}</a>
+                                    : logo}
+                            </li>
+                        );
+                    }),
+                )}
+            </ul>
+        </div>
+    </section>
+)}
+
+<style>
+    .supporters {
+        margin-block: clamp(0.5rem, 2vw, 1rem) clamp(1rem, 3vw, 2rem);
+    }
+
+    h2 {
+        margin: 0 0 1rem;
+        font-size: 0.8rem;
+        color: var(--cam-blue);
+        text-shadow: 2px 2px 0 var(--cam-dark-blue);
+    }
+
+    /* Logos fade in and out at the edges. */
+    .marquee {
+        overflow: hidden;
+        mask-image: linear-gradient(90deg, transparent, black 10%, black 90%, transparent);
+    }
+
+    .track {
+        display: flex;
+        width: max-content;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        animation: scroll var(--duration) linear infinite;
+    }
+
+    .marquee:hover .track,
+    .marquee:focus-within .track {
+        animation-play-state: paused;
+    }
+
+    @keyframes scroll {
+        to { translate: -50% 0; }
+    }
+
+    /* Spacing is padding, not gap, so both laps are exactly the same width. */
+    li {
+        padding-right: clamp(2rem, 6vw, 4rem);
+    }
+
+    a {
+        display: block;
+    }
+
+    /* Every logo shows as a white silhouette so any transparent image fits the dark site. */
+    img {
+        display: block;
+        height: clamp(3rem, 7vw, 4.5rem);
+        width: auto;
+        filter: brightness(0) invert(1);
+        opacity: 0.75;
+        transition: opacity 0.2s;
+    }
+
+    a:hover img,
+    a:focus-visible img {
+        opacity: 1;
+    }
+</style>

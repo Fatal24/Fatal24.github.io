@@ -2,13 +2,18 @@
 import Base from '../layouts/Base.astro';
 import SlantedSection from '../components/SlantedSection.astro';
 import Events from '../components/Events.astro';
+import Committee from '../components/Committee.astro';
+import Sponsors from '../components/Sponsors.astro';
 import logo from '../assets/logo-text.svg?raw';
+import redbullPhoto from '../assets/photos/varsity-2025-redbull.jpg';
+import playerPhoto from '../assets/photos/varsity-player.jpg';
+import gamesPoster from '../assets/photos/games-poster.jpg';
 
 // Icons are hand-drawn Wiggly gifs in public/icons (black lines on transparent),
 // used as a mask so they can be painted in the palette colour.
 const socials = [
     { label: 'CUDGS on Instagram', href: 'https://www.instagram.com/camdigitalgaming', gif: 'icons/instagram.gif' },
-    { label: 'Join the CUDGS Discord server', href: 'https://discord.gg/zb2YUQEdUB', gif: 'icons/discord.gif' },
+    { label: 'Join the CUDGS Discord server', href: 'https://discord.gg/P2TthJCgu2', gif: 'icons/discord.gif' },
 ];
 ---
 
@@ -31,11 +36,14 @@ const socials = [
         </nav>
     </header>
 
-    <SlantedSection title="Events">
+    <Sponsors />
+
+    <SlantedSection title="Events" image={redbullPhoto}>
         <Events />
     </SlantedSection>
 
-    <SlantedSection title="Games" variant="indigo">
+    <!-- 12s loop from obby's "mmmmmmm valorant" (youtu.be/BK8cz1E9Qic), from 0:41.6, no audio. -->
+    <SlantedSection title="Games" variant="indigo" video="videos/games.mp4" poster={gamesPoster}>
         <ul class="games">
             <li>Overwatch</li>
             <li>Valorant</li>
@@ -46,6 +54,10 @@ const socials = [
 
     <SlantedSection title="About Us">
         <p>whatever we want to say about us</p>
+    </SlantedSection>
+
+    <SlantedSection title="Committee" variant="indigo" image={playerPhoto}>
+        <Committee />
     </SlantedSection>
 </Base>
 

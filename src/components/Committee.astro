@@ -1,0 +1,89 @@
+---
+import { committee, gameReps, type CommitteeMember } from '../data/committee.ts';
+
+// Any image in src/assets/committee/ can be used as a photo by filename.
+const photos = import.meta.glob<string>('../assets/committee/*.{png,jpg,jpeg,webp,gif,svg}', {
+    eager: true,
+    query: '?url',
+    import: 'default',
+});
+const photoUrl = (file?: string) => file && photos[`../assets/committee/${file}`];
+const initials = (name: string) => name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
+
+const groups: [string | null, CommitteeMember[]][] = [[null, committee], ['Game Representatives', gameReps]];
+---
+
+{groups.filter(([, people]) => people.length > 0).map(([heading, people]) => (
+    <>
+        {heading && <h3>{heading}</h3>}
+        <ul class="committee">
+            {people.map(({ role, name, photo }) => {
+                const src = photoUrl(photo);
+                return (
+                    <li>
+                        {src
+                            ? <img src={src} alt="" loading="lazy" />
+                            : <span class="avatar" aria-hidden="true">{name ? initials(name) : '?'}</span>}
+                        <span class="name">{name || 'To be announced'}</span>
+                        <span class="role">{role}</span>
+                    </li>
+                );
+            })}
+        </ul>
+    </>
+))}
+
+<style>
+    h3 {
+        margin: 1.5rem 0 1rem;
+        font-size: 0.9rem;
+    }
+
+    .committee {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+        gap: 1rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    li {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 1rem 0.75rem;
+        border-radius: 0.75rem;
+        text-align: center;
+        color: white;
+        background: var(--black);
+    }
+
+    img,
+    .avatar {
+        width: 5rem;
+        aspect-ratio: 1;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .avatar {
+        display: grid;
+        place-items: center;
+        font-size: 1.1rem;
+        color: var(--black);
+        background: var(--cam-blue);
+    }
+
+    .name {
+        font-size: 0.75rem;
+        line-height: 1.5;
+    }
+
+    .role {
+        font-size: 0.6rem;
+        line-height: 1.5;
+        color: var(--cam-blue);
+    }
+</style>

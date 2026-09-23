@@ -1,35 +1,127 @@
 ---
+import type { ImageMetadata } from 'astro';
+import { Image, getImage } from 'astro:assets';
+
 interface Props {
     title: string;
     variant?: 'blue' | 'indigo';
+    /** Photo shown behind the section colour (import it from src/assets). */
+    image?: ImageMetadata;
+    /** Looping muted video behind the section colour, as a path under public/ (e.g. 'videos/games.mp4'). */
+    video?: string;
+    /** Still frame shown before the video loads, and instead of it on slow or data-saver connections. */
+    poster?: ImageMetadata;
 }
 
-const { title, variant = 'blue' } = Astro.props;
+const { title, variant = 'blue', image, video, poster } = Astro.props;
+const posterUrl = poster && (await getImage({ src: poster, width: 1400, format: 'webp' })).src;
 ---
 
-<section class:list={['slanted', variant]}>
+<section class:list={['slanted', variant, { 'has-media': image || video }]}>
+    {/* The section's clip-path crops the media to the trapezium at any size. */}
+    {image && (
+        <Image
+            class="media"
+            src={image}
+            alt=""
+            widths={[800, 1400, 2000]}
+            sizes="(max-width: 60rem) 100vw, 60rem"
+            loading="lazy"
+        />
+    )}
+    {video && (
+        <video
+            class="media"
+            muted
+            loop
+            playsinline
+            preload="none"
+            aria-hidden="true"
+            poster={posterUrl}
+            data-lazy-src={import.meta.env.BASE_URL + video}
+        ></video>
+    )}
     <h2>{title}</h2>
     <slot />
 </section>
 
+<script>
+    // Background videos only download once their section is about to scroll into view, pause
+    // while off screen, and never load at all on data-saver or 2G/3G connections, where the
+    // poster (or plain colour) shows instead. The connection check works in Chrome, Edge and
+    // Android browsers; others always get the video when it comes into view.
+    type Connection = { saveData?: boolean; effectiveType?: string };
+    const connection = (navigator as Navigator & { connection?: Connection }).connection;
+    const slow = connection?.saveData || /2g|3g/.test(connection?.effectiveType ?? '');
+
+    if (!slow) {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                for (const { target, isIntersecting } of entries) {
+                    const video = target as HTMLVideoElement;
+                    if (isIntersecting) {
+                        if (!video.src) video.src = video.dataset.lazySrc!;
+                        video.play().catch(() => {});
+                    } else {
+                        video.pause();
+                    }
+                }
+            },
+            { rootMargin: '300px 0px' },
+        );
+        document.querySelectorAll<HTMLVideoElement>('video[data-lazy-src]').forEach((video) => observer.observe(video));
+    }
+</script>
+
 <style>
     .slanted {
         position: relative;
+        isolation: isolate;
         margin-block: clamp(1.5rem, 4vw, 2.5rem);
         /* Vertical padding clears the slanted edges; horizontal padding keeps text off the sides. */
         padding: calc(var(--slant) + clamp(1.25rem, 3vw, 2rem)) clamp(1.25rem, 4vw, 2.5rem);
     }
 
     .blue {
+        --tint: var(--cam-blue);
+        --tint-opacity: 0.72;
         color: var(--black);
         background: var(--cam-blue);
         clip-path: polygon(0 0, 100% var(--slant), 100% calc(100% - var(--slant)), 0 100%);
     }
 
     .indigo {
+        --tint: var(--indigo);
+        --tint-opacity: 0.66;
         color: white;
         background: var(--indigo);
         clip-path: polygon(0 var(--slant), 100% 0, 100% 100%, 0 calc(100% - var(--slant)));
+    }
+
+    /* Photo or video at the back, the section colour washed over it, content on top.
+       Raise --tint-opacity if text gets hard to read over a busy picture. */
+    .has-media {
+        background: var(--black);
+    }
+
+    /* :global because <Image> renders its own element, which scoped styles don't always reach. */
+    .slanted :global(.media) {
+        position: absolute;
+        inset: 0;
+        z-index: -2;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        pointer-events: none;
+    }
+
+    .has-media::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        background: var(--tint);
+        opacity: var(--tint-opacity);
     }
 
     h2 {

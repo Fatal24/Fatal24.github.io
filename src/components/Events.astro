@@ -45,18 +45,28 @@ const fallback = await getImage({ src: fallbackSrc, width: 800, format: 'webp' }
 <script>
     const HOUR = 1000 * 60 * 60;
 
-    // Set in .env locally and as the BASEROW_TOKEN secret in GitHub Actions.
-    const token = import.meta.env.PUBLIC_BASEROW_TOKEN;
-    const tableId = 1173862;
-    const url = `https://api.baserow.io/api/database/rows/table/${tableId}/?user_field_names=true&order_by=Date`;
+    // Events come from the society's public Google Calendar (see .env.example).
+    const calendarId = import.meta.env.PUBLIC_GOOGLE_CALENDAR_ID;
+    const apiKey = import.meta.env.PUBLIC_GOOGLE_API_KEY;
 
-    type EventRow = {
-        'Event Name': string;
-        Date: string;
-        Location: string | null;
-        Description: string | null;
-        'Image URL': string | null;
+    type CalendarEvent = {
+        summary?: string;
+        location?: string;
+        description?: string;
+        // Timed events have dateTime; all-day events have date (YYYY-MM-DD).
+        start: { dateTime?: string; date?: string };
     };
+
+    // Descriptions written in Google Calendar's editor can contain HTML; read it as plain text.
+    // DOMParser never runs scripts, and the result is only ever used as textContent.
+    const toText = (html: string) =>
+        new DOMParser().parseFromString(html.replace(/<br\s*\/?>/gi, '\n'), 'text/html').body.textContent ?? '';
+
+    // An "Image: https://..." line in the description sets the card picture and isn't shown.
+    function splitImage(text: string) {
+        const match = /^\s*image:\s*(https?:\/\/\S+)\s*$/im.exec(text);
+        return { image: match?.[1] ?? null, text: match ? text.replace(match[0], '').trim() : text.trim() };
+    }
 
     const carousel = document.querySelector<HTMLElement>('.carousel')!;
     const track = carousel.querySelector<HTMLUListElement>('.track')!;
@@ -71,18 +81,20 @@ const fallback = await getImage({ src: fallbackSrc, width: 800, format: 'webp' }
         track.replaceChildren(li);
     }
 
-    function renderCard(event: EventRow) {
+    function renderCard(event: CalendarEvent) {
         const card = template.content.firstElementChild!.cloneNode(true) as HTMLElement;
-        const date = new Date(event.Date);
+        const allDay = !event.start.dateTime;
+        const date = new Date(event.start.dateTime ?? `${event.start.date}T00:00:00`);
+        const { image, text } = splitImage(toText(event.description ?? ''));
         const img = card.querySelector('img')!;
-        img.src = event['Image URL'] || carousel.dataset.fallback!;
+        img.src = image || carousel.dataset.fallback!;
         img.addEventListener('error', () => { img.src = carousel.dataset.fallback!; }, { once: true });
-        card.querySelector('.name')!.textContent = event['Event Name'];
+        card.querySelector('.name')!.textContent = event.summary || 'Untitled event';
         card.querySelector('.date')!.textContent = date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-        card.querySelector('.time')!.textContent = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-        card.querySelector('.location')!.textContent = event.Location || 'TBC';
+        card.querySelector('.time')!.textContent = allDay ? 'All day' : date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        card.querySelector('.location')!.textContent = event.location || 'TBC';
         const description = card.querySelector('.description')!;
-        if (event.Description) description.textContent = event.Description;
+        if (text) description.textContent = text;
         else description.remove();
         return card;
     }
@@ -101,13 +113,19 @@ const fallback = await getImage({ src: fallbackSrc, width: 800, format: 'webp' }
     new ResizeObserver(updateArrows).observe(track);
 
     try {
-        if (!token) throw new Error('PUBLIC_BASEROW_TOKEN is not set');
-        const response = await fetch(url, { headers: { Authorization: `Token ${token}` } });
+        if (!calendarId || !apiKey) throw new Error('PUBLIC_GOOGLE_CALENDAR_ID / PUBLIC_GOOGLE_API_KEY are not set');
+        const url = new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`);
+        url.search = new URLSearchParams({
+            key: apiKey,
+            // Keep an event listed until 8 hours after it ends.
+            timeMin: new Date(Date.now() - 8 * HOUR).toISOString(),
+            singleEvents: 'true', // expand repeating events into individual dates
+            orderBy: 'startTime',
+            maxResults: '20',
+        }).toString();
+        const response = await fetch(url);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const data: { results: EventRow[] } = await response.json();
-        const now = Date.now();
-        // Keep an event listed until 8 hours after it starts.
-        const upcoming = data.results.filter((event) => new Date(event.Date).getTime() + 8 * HOUR > now);
+        const { items: upcoming = [] }: { items?: CalendarEvent[] } = await response.json();
         if (upcoming.length === 0) showStatus('No upcoming events right now. Check the Discord for news!');
         else track.replaceChildren(...upcoming.map(renderCard));
     } catch (error) {
@@ -176,6 +194,7 @@ const fallback = await getImage({ src: fallbackSrc, width: 800, format: 'webp' }
         padding: 0.75rem;
         overflow-y: auto;
         font-size: 0.7em;
+        white-space: pre-line;
         background: rgb(14 17 22 / 0.92);
         opacity: 0;
         transition: opacity 0.2s;

@@ -1,0 +1,135 @@
+---
+import { instagramHandle, instagramPosts, instagramUrl } from '../data/instagram.ts';
+
+const base = import.meta.env.BASE_URL;
+---
+
+<div class="instagram">
+    <a class="follow" href={instagramUrl}>
+        <span class="icon" aria-hidden="true" style={`--icon: url('${base}icons/instagram.gif')`}></span>
+        <span>Follow <strong>@{instagramHandle}</strong> on Instagram</span>
+    </a>
+
+    {instagramPosts.length > 0 && (
+        <div class="posts" data-posts={JSON.stringify(instagramPosts)}>
+            <!-- Instagram's embeds load Meta's scripts and cookies, so they wait for the visitor's OK. -->
+            <div class="consent">
+                <p>Our latest posts are shown by Instagram, which may set cookies and track you.</p>
+                <button type="button" class="load">Show Instagram posts</button>
+            </div>
+            <div class="track" hidden></div>
+        </div>
+    )}
+</div>
+
+<script>
+    const CONSENT_KEY = 'cudgs-instagram-consent';
+    const posts = document.querySelector<HTMLElement>('.instagram .posts');
+
+    function loadPosts() {
+        if (!posts) return;
+        const track = posts.querySelector<HTMLElement>('.track')!;
+        for (const url of JSON.parse(posts.dataset.posts!) as string[]) {
+            const quote = document.createElement('blockquote');
+            quote.className = 'instagram-media';
+            quote.dataset.instgrmPermalink = url;
+            quote.dataset.instgrmVersion = '14';
+            const link = document.createElement('a');
+            link.href = url;
+            link.textContent = 'View this post on Instagram';
+            quote.append(link);
+            track.append(quote);
+        }
+        posts.querySelector('.consent')!.remove();
+        track.hidden = false;
+        const script = document.createElement('script');
+        script.src = 'https://www.instagram.com/embed.js';
+        script.async = true;
+        document.body.append(script);
+    }
+
+    if (posts) {
+        // Remember the choice on this device so returning visitors aren't asked every time.
+        try {
+            if (localStorage.getItem(CONSENT_KEY) === 'yes') loadPosts();
+        } catch {}
+        posts.querySelector('.load')?.addEventListener('click', () => {
+            try {
+                localStorage.setItem(CONSENT_KEY, 'yes');
+            } catch {}
+            loadPosts();
+        });
+    }
+</script>
+
+<style>
+    .follow {
+        display: inline-flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.75rem 1.25rem 0.75rem 0.75rem;
+        border-radius: 0.75rem;
+        color: white;
+        background: var(--black);
+        text-decoration: none;
+        transition: translate 0.2s;
+    }
+
+    .follow:hover,
+    .follow:focus-visible {
+        translate: 0 -3px;
+    }
+
+    .icon {
+        width: 3.5rem;
+        aspect-ratio: 1;
+        background-color: var(--cam-blue);
+        mask: var(--icon) center / contain no-repeat;
+    }
+
+    .follow strong {
+        color: var(--cam-blue);
+    }
+
+    .posts {
+        margin-top: 1.5rem;
+    }
+
+    .consent p {
+        margin: 0 0 0.75rem;
+        font-size: 0.7rem;
+    }
+
+    .load {
+        padding: 0.6rem 1rem;
+        border: 2px solid var(--black);
+        border-radius: 0.5rem;
+        font: inherit;
+        font-size: 0.7rem;
+        color: white;
+        background: var(--black);
+        cursor: pointer;
+    }
+
+    .load:hover,
+    .load:focus-visible {
+        color: var(--black);
+        background: white;
+    }
+
+    /* Instagram's embeds are fixed-width cards, so scroll them sideways like the events. */
+    .track {
+        display: flex;
+        gap: 1rem;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        padding-bottom: 1rem;
+    }
+
+    .track :global(.instagram-media) {
+        flex: 0 0 min(85%, 20rem);
+        min-width: 0 !important;
+        margin: 0 !important;
+        scroll-snap-align: start;
+    }
+</style>
