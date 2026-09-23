@@ -1,12 +1,14 @@
 ---
-import { siDiscord, siInstagram } from 'simple-icons';
+import { siInstagram } from 'simple-icons';
 import SlantedSection from '../components/SlantedSection.astro';
 import Events from '../components/Events.astro';
 import '../styles/global.css';
 
+// `gif` is a hand-drawn Wiggly animation in public/icons (black lines on transparent);
+// `icon` is a simple-icons glyph for anything that hasn't been drawn yet.
 const socials = [
     { label: 'Instagram', href: 'https://www.instagram.com/camdigitalgaming', icon: siInstagram },
-    { label: 'Discord', href: 'https://discord.gg/zb2YUQEdUB', icon: siDiscord },
+    { label: 'Discord', href: 'https://discord.gg/zb2YUQEdUB', gif: 'icons/discord.gif' },
 ];
 ---
 
@@ -26,9 +28,11 @@ const socials = [
         <header>
             <h1>Cambridge University Digital Gaming Society</h1>
             <nav class="socials" aria-label="Social links">
-                {socials.map(({ label, href, icon }) => (
+                {socials.map(({ label, href, icon, gif }) => (
                     <a class="btn" href={href} aria-label={label}>
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d={icon.path} /></svg>
+                        {gif
+                            ? <img class="wiggly" src={import.meta.env.BASE_URL + gif} alt="" />
+                            : <svg viewBox="0 0 24 24" aria-hidden="true"><path d={icon!.path} /></svg>}
                     </a>
                 ))}
             </nav>
@@ -75,9 +79,10 @@ const socials = [
     .btn {
         display: grid;
         place-items: center;
-        width: 3rem;
-        height: 3rem;
-        padding: 0.7rem;
+        width: 3.5rem;
+        height: 3.5rem;
+        padding: 0.75rem;
+        overflow: hidden;
         border: 2px solid var(--teal);
         border-radius: 0.75rem;
         color: var(--teal);
@@ -96,6 +101,20 @@ const socials = [
         width: 100%;
         height: 100%;
         fill: currentColor;
+    }
+
+    /* Lines are black: invert to white on the dark button, back to black on hover. */
+    .wiggly {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        filter: invert(1);
+        transition: filter 0.2s;
+    }
+
+    .btn:hover .wiggly,
+    .btn:focus-visible .wiggly {
+        filter: none;
     }
 
     .games {
