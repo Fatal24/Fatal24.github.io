@@ -1,9 +1,8 @@
 ---
 import Base from '../layouts/Base.astro';
 
-// Describe only what the site actually does. When member login goes live, add sections for
-// the University login, the membership records and the login cookie before switching it on.
-const updated = '23 September 2026';
+// Describe only what the site actually does, and update this page before adding anything new.
+const updated = '24 September 2026';
 const contact = 'yw713@cam.ac.uk';
 ---
 
@@ -20,12 +19,13 @@ const contact = 'yw713@cam.ac.uk';
 
         <h2>What this site collects</h2>
         <p>
-            Very little. There are no accounts, forms, advertising or cross-site tracking, and the site sets no cookies.
+            Very little. There are no forms, advertising or cross-site tracking. The site only sets a cookie if you
+            log in as a member (see below).
         </p>
         <ul>
             <li>
                 <strong>Server logs:</strong> like almost every website, our server records each request's IP address,
-                time and page, to keep the site running and secure. Logs are deleted after 30 days.
+                time and page, to keep the site running and secure. Logs are kept for 14 days, then deleted.
             </li>
             <li>
                 <strong>Visitor statistics:</strong> we count visits with Umami, which runs on our own server and
@@ -34,14 +34,64 @@ const contact = 'yw713@cam.ac.uk';
                 which pages are useful. We respect your browser's Do Not Track setting, and you can opt out below.
             </li>
             <li>
-                <strong>Events list:</strong> loaded from our public Google Calendar. Your browser connects to Google
-                directly, so Google receives your IP address, under Google's privacy policy.
+                <strong>Events list:</strong> loaded from our public Google Calendar, with event pictures from Google
+                Drive. Your browser connects to Google directly, so Google receives your IP address, under Google's
+                privacy policy.
+            </li>
+            <li>
+                <strong>Instagram posts:</strong> if we show posts from our Instagram, they only load after you
+                click to show them. Instagram (Meta) then receives your IP address and may set cookies, under
+                Meta's privacy policy.
             </li>
             <li>
                 <strong>Links:</strong> Instagram, Discord and supporters' websites have their own privacy policies,
                 which apply once you follow a link.
             </li>
         </ul>
+
+        <h2>Member login</h2>
+        <p>
+            Members can log in with their University Account. Login is handled by Nevar, a service run by the Student-Run
+            Computing Facility (SRCF): you enter your password on the University's own login page, never on our site.
+        </p>
+        <ul>
+            <li>
+                <strong>What we receive:</strong> your CRSid, and whether you're a current member of the University. We
+                don't receive your name, email address or password.
+            </li>
+            <li>
+                <strong>What we do with it:</strong> we look up your CRSid in the committee's membership list to show your
+                membership type, expiry date and any member perks. The list holds each member's CRSid, name, membership
+                type and expiry date, and is kept privately by the committee.
+            </li>
+            <li>
+                <strong>Login cookie:</strong> logging in sets one cookie, <code>cudgs_session</code>, which keeps you logged
+                in for up to 7 days. It holds only your CRSid and an expiry time, is signed so it can't be altered, can't be
+                read by scripts, and is deleted when you log out. It's strictly necessary for logging in, so it doesn't need
+                your consent, and it isn't used for anything else.
+            </li>
+            <li>
+                <strong>Why:</strong> to run the society and give members access to their membership and perks, which is in
+                the legitimate interests of the society and its members.
+            </li>
+        </ul>
+
+        <h2>Mailing list</h2>
+        <p>
+            If you join the mailing list on the Members page, we store your name, your CRSid and, if you choose to give it,
+            your college, in a private list kept by the committee. We use it only to email you about CUDGS events and news
+            at your University address. You can leave at any time from the Members page (or by emailing us), which deletes
+            your entry straight away. Each year's list is deleted at the end of that academic year.
+        </p>
+
+        <h2>Esports applications</h2>
+        <p>
+            If you apply for an esports team on the website, we store your CRSid and your answers (name, Discord username,
+            game account, rank, roles, which leagues you're applying for, and your match-week and casual availability) in a
+            private sheet. They're seen only by that game's reps and the President, and used only for team selection and
+            scheduling. You can update your application at any time, or email us to have it deleted. Applications are deleted
+            at the end of each season.
+        </p>
 
         <h2>Opting out of statistics</h2>
         <p>

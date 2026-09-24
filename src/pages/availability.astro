@@ -1,0 +1,99 @@
+---
+// The quick weekly page: upcoming match weeks for every team you've applied to, one tap each.
+// Short to type (cudgs.org/availability, or /available), so it's easy to share on Discord.
+import Base from '../layouts/Base.astro';
+import SlantedSection from '../components/SlantedSection.astro';
+import AvailabilityPicker from '../components/AvailabilityPicker.astro';
+import '../styles/forms.css';
+import { findGame, games, type Game } from '../data/esports.ts';
+import { esportsEnabled, getApplication, getSeason, updateAvailability, type Application, type Season } from '../lib/esports.ts';
+
+export const prerender = false;
+
+const { crsid } = Astro.locals;
+if (!crsid) return Astro.redirect(`/login?return=${encodeURIComponent('/availability')}`);
+Astro.response.headers.set('Cache-Control', 'private, no-store');
+
+let failed = false;
+if (Astro.request.method === 'POST' && esportsEnabled()) {
+    const form = await Astro.request.formData();
+    const game = findGame(String(form.get('game') ?? ''));
+    if (game) {
+        try {
+            await updateAvailability(game, await getSeason(game), crsid, form);
+            return Astro.redirect(`/availability?saved=${game.id}#${game.id}`, 303);
+        } catch (error) {
+            console.error('Availability save failed:', error);
+            failed = true;
+        }
+    }
+}
+
+type Entry = { game: Game; season: Season; app: Application };
+let entries: Entry[] = [];
+if (esportsEnabled()) {
+    try {
+        const found = await Promise.all(
+            games.map(async (game) => {
+                const [season, app] = await Promise.all([getSeason(game), getApplication(game, crsid)]);
+                return app ? { game, season, app } : null;
+            }),
+        );
+        entries = found.filter((e): e is Entry => e !== null);
+    } catch (error) {
+        console.error('Availability load failed:', error);
+        failed = true;
+    }
+}
+const saved = Astro.url.searchParams.get('saved');
+---
+
+<Base title="My availability | CUDGS">
+    <SlantedSection title="My availability" variant="indigo">
+        <p class="lead">
+            Tell your reps which match weeks you can play. Leave a week blank to use your usual answer, so you only need to
+            change the weeks that are different.
+        </p>
+        {failed && <p class="notice error" role="alert">We couldn't load or save your availability just now. Please try again in a few minutes.</p>}
+        {!failed && entries.length === 0 && (
+            <p>You haven't applied for a team yet. <a class="btn" href="/esports">Apply for an esports team</a></p>
+        )}
+    </SlantedSection>
+
+    {entries.map(({ game, season, app }) => (
+        <SlantedSection title={game.name} variant="indigo">
+            <form class="form" method="post" id={game.id}>
+                {saved === game.id && <p class="notice" role="status">Saved. Thanks!</p>}
+                <input type="hidden" name="game" value={game.id} />
+                <AvailabilityPicker game={game} season={season} answers={app.answers} />
+                <div class="row">
+                    <button class="btn" type="submit">Save {game.name} availability</button>
+                    <a class="small" href={`/esports/${game.id}`}>Edit full application</a>
+                </div>
+            </form>
+        </SlantedSection>
+    ))}
+</Base>
+
+<style>
+    .lead {
+        margin: 0;
+        font-size: 0.75rem;
+        line-height: 1.8;
+    }
+
+    a {
+        color: inherit;
+    }
+
+    .row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .small {
+        font-size: 0.6rem;
+    }
+</style>

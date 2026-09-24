@@ -17,6 +17,9 @@ services:
         required: false
     environment:
       TZ: Europe/London
+    # Nevar's public signing key (and later the Google service account), read-only.
+    volumes:
+      - ./secrets:/app/secrets:ro
     # Localhost only: reached through the rathole tunnel, never directly.
     ports:
       - "127.0.0.1:${CUDGS_PORT:-4321}:4321"

@@ -21,7 +21,7 @@ const posterUrl = poster && (await getImage({ src: poster, width: 1400, format: 
     {/* The section's clip-path crops the media to the trapezium at any size. */}
     {image && (
         <Image
-            class="media"
+            class="section-media"
             src={image}
             alt=""
             widths={[800, 1400, 2000]}
@@ -31,7 +31,7 @@ const posterUrl = poster && (await getImage({ src: poster, width: 1400, format: 
     )}
     {video && (
         <video
-            class="media"
+            class="section-media"
             muted
             loop
             playsinline
@@ -104,8 +104,10 @@ const posterUrl = poster && (await getImage({ src: poster, width: 1400, format: 
         background: var(--black);
     }
 
-    /* :global because <Image> renders its own element, which scoped styles don't always reach. */
-    .slanted :global(.media) {
+    /* :global because <Image> renders its own element, which scoped styles don't always reach.
+       Direct children only, with a unique name, so it can't catch media inside the content
+       (the event cards have their own .media). */
+    .slanted > :global(.section-media) {
         position: absolute;
         inset: 0;
         z-index: -2;

@@ -1,0 +1,158 @@
+---
+import Base from '../layouts/Base.astro';
+import { contact } from '../data/contact.ts';
+
+const base = import.meta.env.BASE_URL;
+const icon = (gif: string) => `--icon: url('${base}icons/${gif}')`;
+---
+
+<Base title="Contact us | CUDGS">
+    <article>
+        <h1>Contact us</h1>
+        <p>
+            Questions about joining, events, esports teams, sponsorship or anything else? Get in touch, we'd love
+            to hear from you.
+        </p>
+
+        <ul class="ways">
+            <li>
+                <a class="way" href={`mailto:${contact.email}`}>
+                    <span class="wiggly" aria-hidden="true" style={icon('mail.gif')}></span>
+                    <span>
+                        <strong>Email</strong>
+                        <span class="detail">{contact.email}</span>
+                    </span>
+                </a>
+            </li>
+            <li>
+                <a class="way" href={contact.discordInvite} rel="noopener">
+                    <span class="wiggly" aria-hidden="true" style={icon('discord.gif')}></span>
+                    <span>
+                        <strong>Discord</strong>
+                        <span class="detail">Message <b>{contact.discordName}</b> on the CUDGS Discord</span>
+                    </span>
+                </a>
+            </li>
+            <li>
+                <a class="way" href={contact.instagram} rel="noopener">
+                    <span class="wiggly" aria-hidden="true" style={icon('instagram.gif')}></span>
+                    <span>
+                        <strong>Instagram</strong>
+                        <span class="detail">@{contact.instagramHandle}</span>
+                    </span>
+                </a>
+            </li>
+        </ul>
+
+        <h2>Mailing list</h2>
+        <p>
+            Want to hear about events, tournaments and socials first? Log in with your University account and join the
+            mailing list on the Members page. You don't need to be a paid member.
+        </p>
+        <a class="way raven-login" href={`${base}login?return=${encodeURIComponent('/members#mailing-list')}`}>
+            <span class="wiggly raven" aria-hidden="true" style={icon('raven.gif')}></span>
+            <span>
+                <strong>Log in with Raven</strong>
+                <span class="detail">to join the mailing list</span>
+            </span>
+        </a>
+
+        <h2>Esports teams</h2>
+        <p>
+            Want to play for CUDGS in NSE or NUEL? <a href={`${base}esports`}>Apply on the esports page</a> with your University
+            account, or message your game rep on the Discord.
+        </p>
+
+        <h2>Point of contact</h2>
+        <p>
+            {contact.name} ({contact.role}) is the society's point of contact. For sponsorship, collaborations with
+            other societies, or anything to do with your data, email <a href={`mailto:${contact.email}`}>{contact.email}</a>.
+        </p>
+    </article>
+</Base>
+
+<style>
+    article {
+        padding: clamp(1.25rem, 4vw, 2.5rem);
+        border-radius: 0.75rem;
+        font-size: 0.75rem;
+        line-height: 2;
+        background: rgb(14 17 22 / 0.9);
+    }
+
+    h1 {
+        margin: 0 0 1rem;
+        font-size: clamp(1.2rem, 0.9rem + 1.5vw, 2rem);
+        color: var(--cam-blue);
+        text-shadow: 3px 3px 0 var(--cam-dark-blue);
+    }
+
+    h2 {
+        margin: 2rem 0 0.5rem;
+        font-size: 0.9rem;
+        color: var(--cam-blue);
+    }
+
+    a {
+        color: var(--cam-blue);
+    }
+
+    .ways {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
+        gap: 1rem;
+        margin: 1.5rem 0 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .way {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        height: 100%;
+        padding: 1rem;
+        border: 2px solid var(--cam-blue);
+        border-radius: 0.75rem;
+        color: white;
+        text-decoration: none;
+        line-height: 1.6;
+        transition: background-color 0.2s, color 0.2s;
+    }
+
+    .way:hover,
+    .way:focus-visible {
+        color: var(--black);
+        background: var(--cam-blue);
+    }
+
+    .way > span:last-child {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    .raven-login {
+        display: inline-flex;
+        height: auto;
+    }
+
+    .wiggly.raven {
+        width: 4rem;
+        aspect-ratio: 355 / 261;
+    }
+
+    .detail {
+        font-size: 0.6rem;
+        overflow-wrap: anywhere;
+        opacity: 0.85;
+    }
+
+    .wiggly {
+        flex-shrink: 0;
+        width: 3.25rem;
+        aspect-ratio: 1;
+        background-color: currentColor;
+        mask: var(--icon) center / contain no-repeat;
+    }
+</style>

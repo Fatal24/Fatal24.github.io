@@ -2,12 +2,22 @@
 // Top-right account area. Pages are mostly static, so it asks /api/me who is signed in.
 const base = import.meta.env.BASE_URL;
 
-// Until Nevar's signing key arrives, the Raven button shows the "WIP, sorry" bubble
-// (see WipBubble.astro). Set to true to send it to the real login instead.
-const loginReady = false;
+// Member login via Nevar (the SRCF's University Account login; key 501, approved September 2026).
+// Set to false to show the "WIP, sorry" bubble (WipBubble.astro) instead of logging in.
+const loginReady = true;
+
+// No point linking to Members from the Members page itself.
+const onMembers = Astro.url.pathname.replace(/\/$/, '').endsWith('/members');
+// The home page already has the big logo, so the small home button only appears on other pages.
+const onHome = Astro.url.pathname.replace(/\/$/, '') === base.replace(/\/$/, '');
 ---
 
 <div class="account" data-state="loading">
+    {!onHome && (
+        <a class="home" href={base} aria-label="CUDGS home" title="CUDGS home">
+            <img src={base + 'favicon.svg'} alt="" width="48" height="48" />
+        </a>
+    )}
     <a
         class:list={['raven', { wip: !loginReady }]}
         href={base + 'login'}
@@ -19,9 +29,9 @@ const loginReady = false;
     </a>
     <div class="signed-in">
         <span class="hello">Hello, <span class="who"></span>!</span>
-        <a class="link" href={base + 'members'}>Members</a>
+        {!onMembers && <a class="button" href={base + 'members'}>Members</a>}
         <form method="post" action={base + 'logout'}>
-            <button class="link" type="submit">Log out</button>
+            <button class="button" type="submit">Log out</button>
         </form>
     </div>
 </div>
@@ -50,9 +60,71 @@ const loginReady = false;
         display: flex;
         justify-content: flex-end;
         align-items: center;
+        gap: 1rem;
         min-height: 4.5rem;
         margin-bottom: 1rem;
         font-size: 0.75rem;
+    }
+
+    /* The plain CUDGS lion, top left on every page, back to the home page. */
+    .home {
+        margin-right: auto;
+        border-radius: 0.5rem;
+        transition: scale 0.2s, filter 0.2s;
+    }
+
+    .home img {
+        display: block;
+        width: clamp(2.75rem, 6vw, 3.5rem);
+        height: auto;
+        filter: drop-shadow(3px 3px 0 var(--indigo));
+    }
+
+    .home:hover,
+    .home:focus-visible {
+        scale: 1.08;
+    }
+
+    .home:focus-visible {
+        outline: 3px solid white;
+        outline-offset: 4px;
+    }
+
+    .signed-in {
+        align-items: center;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 0.75rem 1rem;
+    }
+
+    .signed-in form {
+        margin: 0;
+    }
+
+    /* Outlined pixel buttons, matching the event and privacy-page buttons. */
+    .button {
+        display: inline-block;
+        padding: 0.55rem 0.8rem;
+        border: 2px solid var(--cam-blue);
+        border-radius: 0.5rem;
+        font: inherit;
+        font-size: 0.65rem;
+        line-height: 1.4;
+        color: var(--cam-blue);
+        background: rgb(14 17 22 / 0.6);
+        text-decoration: none;
+        cursor: pointer;
+        transition: background-color 0.2s, color 0.2s;
+    }
+
+    .button:hover,
+    .button:focus-visible {
+        color: var(--black);
+        background: var(--cam-blue);
+    }
+
+    .hello {
+        color: white;
     }
 
     .raven,

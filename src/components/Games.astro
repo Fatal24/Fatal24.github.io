@@ -1,0 +1,274 @@
+---
+import { games as gameList, gamesLink } from '../data/games.ts';
+import { formatCount, getDiscordCounts } from '../lib/discord.ts';
+
+// Alphabetical and without duplicates, however the data file is written.
+const games = [...new Set(gameList.map((game) => game.trim()).filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b, 'en', { sensitivity: 'base' }),
+);
+
+const discordIcon = `${import.meta.env.BASE_URL}icons/discord.gif`;
+
+// Counted when the page is built, then kept fresh in the browser from /api/discord.
+const counts = await getDiscordCounts();
+---
+
+<div class="games-block" style={`--count: ${games.length}`}>
+    <a class="big" href={gamesLink.href} style={`--icon: url('${discordIcon}')`}>
+        <span class="icon" aria-hidden="true"></span>
+        <span class="label">{gamesLink.label}</span>
+        <span class="sub" data-discord-sub>
+            {counts ? <>Join <span data-discord-members>{formatCount(counts.members)}</span> members on Discord</> : gamesLink.sub}
+        </span>
+        <span class="online" data-discord-online hidden={!counts?.online}>
+            <span class="dot" aria-hidden="true"></span>
+            <span data-discord-online-count>{counts ? formatCount(counts.online) : ''}</span> online now
+        </span>
+    </a>
+
+    <div class="reel">
+        <!-- The list appears twice so the loop is seamless; screen readers get it once. -->
+        <div class="track">
+            <ul aria-label="Games we play">
+                {games.map((game) => <li>{game}</li>)}
+            </ul>
+            <ul aria-hidden="true">
+                {games.map((game) => <li>{game}</li>)}
+            </ul>
+        </div>
+    </div>
+</div>
+
+
+<p class="esports-line">
+    <a class="esports" href={`${import.meta.env.BASE_URL}esports`}>Esports teams: apply for NSE / NUEL</a>
+</p>
+<script>
+    // Refresh the member count every minute while the page is open (the server caches Discord's
+    // answer, so this never reaches Discord directly).
+    const members = document.querySelector<HTMLElement>('[data-discord-members]');
+    const sub = document.querySelector<HTMLElement>('[data-discord-sub]');
+    const online = document.querySelector<HTMLElement>('[data-discord-online]');
+    const onlineCount = document.querySelector<HTMLElement>('[data-discord-online-count]');
+    async function refreshCount() {
+        if (document.hidden) return;
+        try {
+            const response = await fetch(`${import.meta.env.BASE_URL}api/discord`);
+            if (!response.ok) return;
+            const { members: count, online: now } = await response.json();
+            if (typeof count !== 'number') return;
+            const text = count.toLocaleString('en-GB');
+            if (members) members.textContent = text;
+            else if (sub) sub.textContent = `Join ${text} members on Discord`;
+            if (online && onlineCount && typeof now === 'number' && now > 0) {
+                onlineCount.textContent = now.toLocaleString('en-GB');
+                online.hidden = false;
+            }
+        } catch {}
+    }
+    refreshCount();
+    setInterval(refreshCount, 60_000);
+
+    // The reel is an ordinary scrollable box that scrolls itself at a fixed 60 CSS px per second
+    // (slower and each frame moves less than a pixel, so the browser's pixel snapping makes it
+    // step). Touching, dragging, the mouse wheel or the keyboard hands control to the visitor; it
+    // carries on by itself a moment after they stop. The list is there twice, so jumping back by
+    // one copy's height keeps the loop seamless in both directions.
+    const SPEED = 60;
+    const RESUME_AFTER_MS = 2500;
+    const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+
+    for (const reel of document.querySelectorAll<HTMLElement>('.games-block .reel')) {
+        const copy = reel.querySelector('ul')!;
+        let position = 0;
+        let pausedUntil = 0;
+        let last = 0;
+
+        const wrap = () => {
+            const h = copy.offsetHeight;
+            if (!h) return;
+            if (reel.scrollTop >= h) reel.scrollTop -= h;
+            else if (reel.scrollTop <= 0) reel.scrollTop += h;
+        };
+        const pause = () => {
+            pausedUntil = performance.now() + RESUME_AFTER_MS;
+        };
+        for (const type of ['wheel', 'touchstart', 'touchmove', 'pointerdown', 'keydown']) {
+            reel.addEventListener(type, pause, { passive: true });
+        }
+        // Whoever moved it last (visitor or script), keep the loop going from there.
+        reel.addEventListener('scroll', () => {
+            if (reduceMotion.matches || performance.now() >= pausedUntil) return;
+            wrap();
+            position = reel.scrollTop;
+        }, { passive: true });
+
+        const tick = (now: number) => {
+            const dt = last ? Math.min(now - last, 100) / 1000 : 0;
+            last = now;
+            if (!reduceMotion.matches && now >= pausedUntil && !document.hidden) {
+                position += SPEED * dt;
+                const h = copy.offsetHeight;
+                if (h && position >= h) position -= h;
+                reel.scrollTop = position;
+            }
+            requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+    }
+</script>
+
+<style>
+    .games-block {
+        --height: clamp(14rem, 30vw, 18rem);
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 1rem;
+        height: var(--height);
+    }
+
+    .big {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: clamp(0.5rem, 2vw, 1rem) 0;
+        color: var(--cam-blue);
+        text-decoration: none;
+        transition: color 0.2s, transform 0.2s;
+    }
+
+    .big:hover,
+    .big:focus-visible {
+        color: white;
+        transform: translateX(4px);
+    }
+
+    /* Link to the esports team applications, under the Games block. */
+    .esports-line {
+        margin: 1rem 0 0;
+    }
+
+    .esports {
+        display: inline-block;
+        padding: 0.45rem 0.7rem;
+        border: 2px solid var(--cam-blue);
+        border-radius: 0.5rem;
+        font-size: 0.6rem;
+        color: var(--cam-blue);
+        background: rgb(14 17 22 / 0.55);
+        text-decoration: none;
+        transition: background-color 0.2s, color 0.2s;
+    }
+
+    .esports:hover,
+    .esports:focus-visible {
+        color: var(--black);
+        background: var(--cam-blue);
+    }
+
+    .icon {
+        width: clamp(3rem, 7vw, 4.5rem);
+        aspect-ratio: 1;
+        background-color: currentColor;
+        mask: var(--icon) center / contain no-repeat;
+    }
+
+    .label {
+        font-size: clamp(1rem, 0.7rem + 1.5vw, 1.6rem);
+        line-height: 1.4;
+    }
+
+    .sub {
+        font-size: 0.7rem;
+        line-height: 1.5;
+        opacity: 0.85;
+    }
+
+    .online {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: -0.4rem;
+        font-size: 0.6rem;
+        line-height: 1.5;
+        opacity: 0.85;
+    }
+
+    .online[hidden] {
+        display: none;
+    }
+
+    /* Discord's "online" green, gently pulsing. */
+    .dot {
+        width: 0.55rem;
+        height: 0.55rem;
+        border-radius: 50%;
+        background: #23a55a;
+        box-shadow: 0 0 0 0 rgb(35 165 90 / 0.6);
+        animation: pulse 2s ease-out infinite;
+    }
+
+    @keyframes pulse {
+        to {
+            box-shadow: 0 0 0 0.45rem rgb(35 165 90 / 0);
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .dot {
+            animation: none;
+        }
+    }
+
+    /* Names stream upwards forever, in alphabetical order (see the script). Visitors can also
+       scroll it themselves; the scrollbar is hidden and the edges fade out. */
+    .reel {
+        position: relative;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: none;
+        touch-action: pan-y;
+        mask: linear-gradient(transparent, black 20%, black 80%, transparent);
+    }
+
+    .reel::-webkit-scrollbar {
+        display: none;
+    }
+
+    ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    li {
+        padding: 0.9rem 1rem;
+        border-bottom: 1px solid rgb(142 232 216 / 0.25);
+        font-size: 0.7rem;
+        line-height: 1.5;
+        text-align: center;
+        color: var(--cam-blue);
+    }
+
+    /* Phones: button on top, the reel below it. */
+    @media (max-width: 40rem) {
+        .games-block {
+            grid-template-columns: 1fr;
+            grid-template-rows: auto 12rem;
+            height: auto;
+        }
+    }
+
+    /* No motion: show the whole list, scrollable, instead of streaming it. */
+    @media (prefers-reduced-motion: reduce) {
+        .track ul[aria-hidden] {
+            display: none;
+        }
+
+        .reel {
+            mask: none;
+        }
+    }
+</style>

@@ -11,12 +11,18 @@ const photoUrl = (file?: string) => file && photos[`../assets/committee/${file}`
 const initials = (name: string) => name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
 
 const groups: [string | null, CommitteeMember[]][] = [[null, committee], ['Game Representatives', gameReps]];
+
+// Columns that split `count` people into rows as even as possible, using at most `max` columns
+// (6 people: 6 in one row, or 3 + 3, or 2 + 2 + 2, never 5 + 1).
+const balanced = (count: number, max: number) => Math.ceil(count / Math.ceil(count / Math.min(max, count)));
+const columns = (count: number) =>
+    `--cols-6: ${balanced(count, 6)}; --cols-4: ${balanced(count, 4)}; --cols-3: ${balanced(count, 3)}; --cols-2: ${balanced(count, 2)}`;
 ---
 
 {groups.filter(([, people]) => people.length > 0).map(([heading, people]) => (
     <>
         {heading && <h3>{heading}</h3>}
-        <ul class="committee">
+        <ul class="committee" style={columns(people.length)}>
             {people.map(({ role, name, photo }) => {
                 const src = photoUrl(photo);
                 return (
@@ -39,25 +45,50 @@ const groups: [string | null, CommitteeMember[]][] = [[null, committee], ['Game 
         font-size: 0.9rem;
     }
 
+    /* Cards share each row equally; a shorter last row is centred. The column count steps down with
+       the space available (container queries), always to a count that keeps the rows balanced. */
     .committee {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
-        gap: 1rem;
+        --gap: 1rem;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: var(--gap);
         margin: 0;
         padding: 0;
         list-style: none;
+        container-type: inline-size;
+    }
+
+    @container (min-width: 29rem) {
+        .committee > li {
+            --cols: var(--cols-3);
+        }
+    }
+
+    @container (min-width: 39rem) {
+        .committee > li {
+            --cols: var(--cols-4);
+        }
+    }
+
+    @container (min-width: 59rem) {
+        .committee > li {
+            --cols: var(--cols-6);
+        }
     }
 
     li {
+        --cols: var(--cols-2);
+        flex: 0 0 calc((100% - (var(--cols) - 1) * var(--gap)) / var(--cols));
+        min-width: 0;
+        box-sizing: border-box;
         display: flex;
         flex-direction: column;
         align-items: center;
         gap: 0.5rem;
-        padding: 1rem 0.75rem;
-        border-radius: 0.75rem;
+        padding: 0.5rem 0.25rem;
         text-align: center;
         color: white;
-        background: var(--black);
     }
 
     img,

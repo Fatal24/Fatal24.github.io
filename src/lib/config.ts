@@ -28,6 +28,14 @@ export const config = {
     get membersRange() {
         return process.env.MEMBERS_SHEET_RANGE ?? 'Members!A:D';
     },
+    /** The mailing list sheet (Name | CRSid | College); the service account needs Editor access. */
+    get mailingListSheetId() {
+        return process.env.MAILING_LIST_SHEET_ID;
+    },
+    /** Esports applications sheet (one tab per game); the service account needs Editor access. */
+    get esportsSheetId() {
+        return process.env.ESPORTS_SHEET_ID;
+    },
     get googleServiceAccountFile() {
         return process.env.GOOGLE_SERVICE_ACCOUNT_FILE;
     },

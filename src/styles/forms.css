@@ -1,0 +1,222 @@
+/* Forms for the esports pages: pixel-styled fields, and option "chips" that are real radio buttons
+   and checkboxes underneath, so everything works with a keyboard and without JavaScript. */
+
+.form {
+    display: grid;
+    gap: 1.6rem;
+}
+
+.field {
+    display: grid;
+    gap: 0.55rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+}
+
+.field > legend,
+.field > label > .q {
+    padding: 0;
+    font-size: 0.75rem;
+    line-height: 1.6;
+}
+
+.field .req {
+    color: #ffb4b4;
+}
+
+.field .help {
+    margin: 0;
+    font-size: 0.6rem;
+    line-height: 1.6;
+    opacity: 0.8;
+}
+
+.form input[type='text'],
+.form input[type='date'],
+.form input[type='number'],
+.form select {
+    width: 100%;
+    max-width: 32rem;
+    padding: 0.65rem 0.75rem;
+    border: 2px solid var(--cam-blue);
+    border-radius: 0.5rem;
+    font: inherit;
+    font-size: 0.7rem;
+    color: white;
+    background: rgb(14 17 22 / 0.75);
+    color-scheme: dark;
+}
+
+.form input:focus-visible,
+.form select:focus-visible,
+.chip-choice input:focus-visible + span {
+    outline: 3px solid white;
+    outline-offset: 2px;
+}
+
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.chip-choice {
+    position: relative;
+}
+
+.chip-choice input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+}
+
+.chip-choice span {
+    display: inline-block;
+    padding: 0.5rem 0.75rem;
+    border: 2px solid var(--cam-blue);
+    border-radius: 0.5rem;
+    font-size: 0.65rem;
+    line-height: 1.5;
+    color: var(--cam-blue);
+    background: rgb(14 17 22 / 0.6);
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+.chip-choice input:checked + span {
+    color: var(--black);
+    background: var(--cam-blue);
+}
+
+.chip-choice input:hover + span {
+    border-color: white;
+}
+
+/* Long single options (e.g. the NSE / NUEL choice) read better as full-width rows. */
+.chips.stack {
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.btn {
+    justify-self: start;
+    display: inline-block;
+    padding: 0.7rem 1rem;
+    border: 2px solid var(--cam-blue);
+    border-radius: 0.5rem;
+    font: inherit;
+    font-size: 0.75rem;
+    color: var(--black);
+    background: var(--cam-blue);
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.btn.secondary {
+    color: var(--cam-blue);
+    background: rgb(14 17 22 / 0.6);
+}
+
+.btn:hover,
+.btn:focus-visible {
+    color: var(--black);
+    background: white;
+    border-color: white;
+}
+
+.notice {
+    padding: 0.7rem 0.9rem;
+    border-left: 4px solid var(--cam-blue);
+    background: rgb(14 17 22 / 0.45);
+    font-size: 0.7rem;
+    line-height: 1.7;
+}
+
+.notice.error {
+    border-left-color: #ff8a8a;
+}
+
+.notice ul {
+    margin: 0.4rem 0 0;
+    padding-left: 1.2rem;
+}
+
+/* Match weeks: one row per date, Available / Maybe / Unavailable as a chip group. */
+.weeks {
+    display: grid;
+    gap: 0.6rem;
+}
+
+.week {
+    display: grid;
+    grid-template-columns: minmax(9rem, auto) 1fr;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-size: 0.65rem;
+}
+
+.week legend {
+    float: left;
+    padding: 0;
+}
+
+@media (max-width: 40rem) {
+    .week {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Casual availability: days across, time slots down. Scrolls sideways on phones. */
+.grid-wrap {
+    overflow-x: auto;
+}
+
+.casual {
+    border-collapse: separate;
+    border-spacing: 0.3rem;
+    font-size: 0.6rem;
+}
+
+.casual th {
+    font-weight: normal;
+    padding: 0.2rem 0.4rem;
+    white-space: nowrap;
+}
+
+.casual td .chip-choice span {
+    min-width: 2.6rem;
+    text-align: center;
+    padding: 0.5rem 0.4rem;
+}
+
+.table-wrap {
+    overflow-x: auto;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.6rem;
+    line-height: 1.6;
+}
+
+.table th,
+.table td {
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid rgb(142 232 216 / 0.3);
+    text-align: left;
+    vertical-align: top;
+}
+
+.table th {
+    color: var(--cam-blue);
+    font-weight: normal;
+    white-space: nowrap;
+}

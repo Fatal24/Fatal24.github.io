@@ -1,0 +1,229 @@
+---
+import Base from '../../../layouts/Base.astro';
+import SlantedSection from '../../../components/SlantedSection.astro';
+import AvailabilityPicker from '../../../components/AvailabilityPicker.astro';
+import '../../../styles/forms.css';
+import { casualGrid, findGame, optionLabel, optionValue } from '../../../data/esports.ts';
+import {
+    canManage, esportsEnabled, getApplication, getSeason, saveApplication, validate,
+    type Answers, type Application, type Season,
+} from '../../../lib/esports.ts';
+
+export const prerender = false;
+
+const game = findGame(Astro.params.game ?? '');
+if (!game) return new Response('Not found', { status: 404 });
+const { crsid } = Astro.locals;
+if (!crsid) return Astro.redirect(`/login?return=${encodeURIComponent(`/esports/${game.id}`)}`);
+Astro.response.headers.set('Cache-Control', 'private, no-store');
+
+let season: Season = {};
+let previous: Application | null = null;
+let loadFailed = false;
+if (esportsEnabled()) {
+    try {
+        [season, previous] = await Promise.all([getSeason(game), getApplication(game, crsid)]);
+    } catch (error) {
+        console.error('Esports lookup failed:', error);
+        loadFailed = true;
+    }
+}
+
+// The form posts back to this page. Astro's origin check blocks cross-site posts, and the CRSid
+// always comes from the login. Errors re-show the form with what they typed; success redirects.
+let errors: string[] = [];
+let draft: Answers | undefined;
+if (Astro.request.method === 'POST' && esportsEnabled() && !loadFailed) {
+    const result = validate(game, season, await Astro.request.formData());
+    if (result.errors.length) {
+        errors = result.errors;
+        draft = result.answers;
+    } else {
+        try {
+            const added = await saveApplication(game, season, crsid, result.answers);
+            return Astro.redirect(`/esports/${game.id}?saved=${added ? 'new' : 'updated'}#apply`, 303);
+        } catch (error) {
+            console.error('Esports save failed:', error);
+            errors = ["We couldn't save your application just now. Please try again in a few minutes."];
+            draft = result.answers;
+        }
+    }
+}
+const saved = Astro.url.searchParams.get('saved');
+const answers = draft ?? previous?.answers;
+const value = (id: string) => answers?.questions[id];
+const has = (id: string, v: string) => {
+    const a = value(id);
+    return Array.isArray(a) ? a.includes(v) : a === v;
+};
+---
+
+<Base title={`${game.name} team applications | CUDGS`}>
+    <SlantedSection title={`${game.name} teams`} variant="indigo">
+        <div class="intro">
+            {game.intro.map((p) => <p>{p}</p>)}
+            <ul class="links">
+                {game.links.map((l) => (
+                    <li>
+                        <a href={l.href} rel="noopener" target="_blank">{l.label}</a>
+                        {l.code && <> (team join code <code>{l.code}</code>)</>}
+                    </li>
+                ))}
+            </ul>
+            <p class="small">Questions? {game.contact}.</p>
+            {canManage(crsid, game) && (
+                <p class="small">
+                    You're a rep: <a href={`/esports/${game.id}/responses`}>see responses</a> ·{' '}
+                    <a href={`/esports/${game.id}/manage`}>set season dates</a>
+                </p>
+            )}
+        </div>
+    </SlantedSection>
+
+    <SlantedSection title={previous ? 'Update your application' : 'Apply'} variant="indigo">
+        {!esportsEnabled() && <p>Applications aren't open on the website yet.</p>}
+        {loadFailed && <p>We couldn't load the application form just now. Please try again in a few minutes.</p>}
+        {esportsEnabled() && !loadFailed && (
+            <form class="form" method="post" action={`/esports/${game.id}#apply`} id="apply">
+                {saved && (
+                    <p class="notice" role="status">
+                        {saved === 'new' ? 'Application sent. Thanks!' : 'Application updated.'} Bookmark{' '}
+                        <a href="/availability">cudgs.org/availability</a> to update your match weeks in a few seconds.
+                    </p>
+                )}
+                {errors.length > 0 && (
+                    <div class="notice error" role="alert">
+                        Please fix these and send it again:
+                        <ul>{errors.map((e) => <li>{e}</li>)}</ul>
+                    </div>
+                )}
+                {previous && (
+                    <p class="small">First sent {previous.submitted}{previous.updated && previous.updated !== previous.submitted && <>, last updated {previous.updated}</>}.</p>
+                )}
+                <p class="small">Logged in as <strong>{crsid}</strong> (current University member). <span class="req">*</span> = required.</p>
+
+                {game.questions.map((q) => (
+                    q.type === 'text' ? (
+                        <div class="field">
+                            <label>
+                                <span class="q">{q.label}{q.required && <span class="req"> *</span>}</span>
+                                {q.help && <p class="help">{q.help}</p>}
+                                <input type="text" name={`q_${q.id}`} maxlength="200" required={q.required} value={String(value(q.id) ?? '')} />
+                            </label>
+                        </div>
+                    ) : q.type === 'confirm' ? (
+                        <fieldset class="field">
+                            <legend>{q.required ? 'Confirmation' : 'Optional'}{q.required && <span class="req"> *</span>}</legend>
+                            {q.help && <p class="help">{q.help}</p>}
+                            <label class="chip-choice">
+                                <input type="checkbox" name={`q_${q.id}`} value="yes" required={q.required} checked={value(q.id) === 'Yes'} />
+                                <span>{q.label}</span>
+                            </label>
+                        </fieldset>
+                    ) : (
+                        <fieldset class="field">
+                            <legend>{q.label}{q.required && <span class="req"> *</span>}</legend>
+                            {q.help && <p class="help">{q.help}</p>}
+                            <div class:list={['chips', { stack: (q.options ?? []).some((o) => optionLabel(o).length > 30) }]}>
+                                {(q.options ?? []).map((o) => (
+                                    <label class="chip-choice">
+                                        <input
+                                            type={q.type === 'multi' ? 'checkbox' : 'radio'}
+                                            name={`q_${q.id}`}
+                                            value={optionValue(o)}
+                                            required={q.required && q.type === 'select'}
+                                            checked={has(q.id, optionValue(o))}
+                                        />
+                                        <span>{optionLabel(o)}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </fieldset>
+                    )
+                ))}
+
+                <div class="field">
+                    <span class="q">Match weeks</span>
+                    <p class="help">
+                        Set what you're usually like for each league, then only mark the weeks that are different. You can
+                        update this any time at <a href="/availability">cudgs.org/availability</a>.
+                    </p>
+                    <AvailabilityPicker game={game} season={season} answers={answers} />
+                </div>
+
+                <div class="field">
+                    <span class="q">Casual gaming (optional)</span>
+                    <p class="help">When are you usually free for casual games and community nights? Tick any that work.</p>
+                    <div class="grid-wrap">
+                        <table class="casual">
+                            <thead>
+                                <tr><th></th>{casualGrid.days.map((d) => <th scope="col">{d}</th>)}</tr>
+                            </thead>
+                            <tbody>
+                                {casualGrid.slots.map((s) => (
+                                    <tr>
+                                        <th scope="row">{s}</th>
+                                        {casualGrid.days.map((d) => (
+                                            <td>
+                                                <label class="chip-choice" title={`${d} ${s}`}>
+                                                    <input type="checkbox" name="casual" value={`${d} ${s}`} aria-label={`${d} ${s}`} checked={answers?.casual.includes(`${d} ${s}`)} />
+                                                    <span>✓</span>
+                                                </label>
+                                            </td>
+                                        ))}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <button class="btn" type="submit">{previous ? 'Update application' : 'Send application'}</button>
+                <p class="help">
+                    Your answers are shared with the {game.name} reps and the President for team selection. See the
+                    <a href="/privacy">privacy notice</a>.
+                </p>
+            </form>
+        )}
+    </SlantedSection>
+</Base>
+
+<style>
+    .intro {
+        display: grid;
+        gap: 0.8rem;
+        font-size: 0.75rem;
+        line-height: 1.8;
+    }
+
+    .intro p,
+    .links {
+        margin: 0;
+    }
+
+    .links {
+        padding-left: 1.2rem;
+    }
+
+    a {
+        color: inherit;
+    }
+
+    code {
+        padding: 0.1rem 0.35rem;
+        border-radius: 0.3rem;
+        background: rgb(14 17 22 / 0.6);
+        color: var(--cam-blue);
+    }
+
+    .small {
+        margin: 0;
+        font-size: 0.6rem;
+        line-height: 1.7;
+        opacity: 0.9;
+    }
+
+    .req {
+        color: #ffb4b4;
+    }
+</style>

@@ -1,0 +1,134 @@
+---
+import Base from '../../../layouts/Base.astro';
+import SlantedSection from '../../../components/SlantedSection.astro';
+import '../../../styles/forms.css';
+import { findGame } from '../../../data/esports.ts';
+import { canManage, esportsEnabled, generateWeeks, getSeason, saveSeason, type Season } from '../../../lib/esports.ts';
+
+export const prerender = false;
+
+const game = findGame(Astro.params.game ?? '');
+if (!game) return new Response('Not found', { status: 404 });
+const { crsid } = Astro.locals;
+if (!crsid) return Astro.redirect(`/login?return=${encodeURIComponent(`/esports/${game.id}/manage`)}`);
+if (!canManage(crsid, game)) return new Response(`Only the ${game.name} reps can set season dates.`, { status: 403 });
+Astro.response.headers.set('Cache-Control', 'private, no-store');
+
+// Each league: "Fill dates" makes weekly dates from a first match date and a number of weeks;
+// "Save dates" saves the (possibly edited) list. Blank dates are dropped.
+let message = '';
+let failed = false;
+if (Astro.request.method === 'POST' && esportsEnabled()) {
+    const form = await Astro.request.formData();
+    const action = String(form.get('action') ?? '');
+    try {
+        const current = await getSeason(game);
+        const next: Season = { ...current };
+        for (const l of game.leagues) {
+            if (action === `fill_${l.id}`) {
+                next[l.id] = generateWeeks(String(form.get(`start_${l.id}`) ?? ''), Number(form.get(`count_${l.id}`) ?? 0));
+            } else if (action === 'save') {
+                next[l.id] = form.getAll(`date_${l.id}`).map(String).filter(Boolean);
+            }
+        }
+        await saveSeason(game, next);
+        return Astro.redirect(`/esports/${game.id}/manage?saved=1`, 303);
+    } catch (error) {
+        console.error('Season save failed:', error);
+        message = "We couldn't save the dates just now. Please try again.";
+    }
+}
+
+let season: Season = {};
+if (esportsEnabled()) {
+    try {
+        season = await getSeason(game);
+    } catch (error) {
+        console.error('Season load failed:', error);
+        failed = true;
+    }
+}
+const saved = Astro.url.searchParams.get('saved');
+---
+
+<Base title={`${game.name} season dates | CUDGS`}>
+    <SlantedSection title="Season dates" variant="indigo">
+        <p class="small">
+            Players pick Available / Maybe / Unavailable for each date. <a href={`/esports/${game.id}/responses`}>Responses</a> ·{' '}
+            <a href={`/esports/${game.id}`}>Application form</a>
+        </p>
+        {!esportsEnabled() && <p>The esports sheet isn't set up yet.</p>}
+        {failed && <p>We couldn't load the dates just now. Please try again in a few minutes.</p>}
+        {saved && <p class="notice" role="status">Dates saved.</p>}
+        {message && <p class="notice error" role="alert">{message}</p>}
+
+        {esportsEnabled() && !failed && (
+            <form class="form" method="post">
+                {game.leagues.map((l) => (
+                    <fieldset class="field league">
+                        <legend>{l.name}: {l.day}, {l.time}</legend>
+                        <div class="fill">
+                            <label>First match <input type="date" name={`start_${l.id}`} value={season[l.id]?.[0] ?? ''} /></label>
+                            <label>Weeks <input type="number" name={`count_${l.id}`} min="1" max="30" value={String(season[l.id]?.length || 8)} /></label>
+                            <button class="btn secondary" type="submit" name="action" value={`fill_${l.id}`}>Fill weekly dates</button>
+                        </div>
+                        {(season[l.id] ?? []).length > 0 && (
+                            <div class="dates">
+                                {(season[l.id] ?? []).map((d, i) => (
+                                    <label>Week {i + 1} <input type="date" name={`date_${l.id}`} value={d} /></label>
+                                ))}
+                                <label>Add a week <input type="date" name={`date_${l.id}`} value="" /></label>
+                            </div>
+                        )}
+                    </fieldset>
+                ))}
+                <button class="btn" type="submit" name="action" value="save">Save dates</button>
+                <p class="help">
+                    Clear a date to remove that week. Answers are stored by week number, so moving a date keeps them, but
+                    removing or adding a week in the middle renumbers the weeks after it: ask players to re-check if you do.
+                </p>
+            </form>
+        )}
+    </SlantedSection>
+</Base>
+
+<style>
+    .small {
+        margin: 0 0 1rem;
+        font-size: 0.65rem;
+        line-height: 1.7;
+    }
+
+    a {
+        color: inherit;
+    }
+
+    .league {
+        padding: 1rem;
+        border: 2px solid rgb(142 232 216 / 0.4);
+        border-radius: 0.75rem;
+    }
+
+    .fill,
+    .dates {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 0.8rem;
+    }
+
+    .fill label,
+    .dates label {
+        display: grid;
+        gap: 0.35rem;
+        font-size: 0.6rem;
+    }
+
+    .fill input[type='number'] {
+        width: 6rem;
+    }
+
+    .dates input {
+        width: 11rem;
+    }
+</style>

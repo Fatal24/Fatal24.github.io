@@ -1,12 +1,9 @@
 ---
-import { getImage } from 'astro:assets';
-import fallbackSrc from '../assets/photos/varsity-2025-redbull.jpg';
-
-// Picture for events without their own "Image:" line, resized to a small webp.
-const fallback = await getImage({ src: fallbackSrc, width: 800, format: 'webp' });
+// Events without their own picture (a Drive attachment or an "Image:" line) show no picture area,
+// so their cards are only as tall as their text.
 ---
 
-<div class="carousel" data-fallback={fallback.src}>
+<div class="carousel">
     <button class="arrow prev" type="button" aria-label="Previous events" hidden>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
     </button>
@@ -19,10 +16,9 @@ const fallback = await getImage({ src: fallbackSrc, width: 800, format: 'webp' }
 </div>
 
 <template id="event-card">
-    <li class="card" tabindex="0">
+    <li class="card">
         <div class="media">
             <img alt="" loading="lazy" decoding="async" />
-            <p class="description"></p>
         </div>
         <h3 class="name"></h3>
         <div class="chips">
@@ -34,10 +30,17 @@ const fallback = await getImage({ src: fallbackSrc, width: 800, format: 'webp' }
                 <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
                 <span class="time"></span>
             </span>
-            <span class="chip">
+            <a class="chip location" target="_blank" rel="noopener">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></svg>
-                <span class="location"></span>
-            </span>
+                <span class="place"></span>
+            </a>
+        </div>
+        <p class="description"></p>
+        <button class="more" type="button" hidden>More</button>
+        <div class="actions">
+            <a class="action signup" target="_blank" rel="noopener" hidden>Sign up</a>
+            <a class="action gcal" target="_blank" rel="noopener">+ Google Calendar</a>
+            <button class="action ics" type="button">+ Apple / Outlook (.ics)</button>
         </div>
     </li>
 </template>
@@ -49,12 +52,16 @@ const fallback = await getImage({ src: fallbackSrc, width: 800, format: 'webp' }
     const calendarId = import.meta.env.PUBLIC_GOOGLE_CALENDAR_ID;
     const apiKey = import.meta.env.PUBLIC_GOOGLE_API_KEY;
 
+    type EventTime = { dateTime?: string; date?: string };
     type CalendarEvent = {
+        id: string;
         summary?: string;
         location?: string;
         description?: string;
-        // Timed events have dateTime; all-day events have date (YYYY-MM-DD).
-        start: { dateTime?: string; date?: string };
+        // Timed events have dateTime; all-day events have date (YYYY-MM-DD, end is exclusive).
+        start: EventTime;
+        end: EventTime;
+        attachments?: { fileId?: string; mimeType?: string }[];
     };
 
     // Descriptions written in Google Calendar's editor can contain HTML; read it as plain text.
@@ -62,10 +69,74 @@ const fallback = await getImage({ src: fallbackSrc, width: 800, format: 'webp' }
     const toText = (html: string) =>
         new DOMParser().parseFromString(html.replace(/<br\s*\/?>/gi, '\n'), 'text/html').body.textContent ?? '';
 
-    // An "Image: https://..." line in the description sets the card picture and isn't shown.
-    function splitImage(text: string) {
-        const match = /^\s*image:\s*(https?:\/\/\S+)\s*$/im.exec(text);
-        return { image: match?.[1] ?? null, text: match ? text.replace(match[0], '').trim() : text.trim() };
+    // Lines like "Image: https://..." or "Sign up: https://..." become the card picture or a
+    // button instead of being shown as text.
+    const LINK_LINE = /^\s*(image|sign ?up|rsvp|tickets?)\s*:\s*(https?:\/\/\S+)\s*$/gim;
+    function splitLinks(text: string) {
+        const links: { image?: string; signup?: string } = {};
+        const rest = text.replace(LINK_LINE, (_, kind: string, url: string) => {
+            if (kind.toLowerCase() === 'image') links.image = url;
+            else links.signup = url;
+            return '';
+        });
+        return { links, text: rest.replace(/\n{3,}/g, '\n\n').trim() };
+    }
+
+    // A poster attached from Google Drive (shared "Anyone with the link") beats an Image: line;
+    // Drive serves a resized thumbnail for it.
+    function driveImage(event: CalendarEvent) {
+        const file = event.attachments?.find((a) => a.fileId && a.mimeType?.startsWith('image/'));
+        return file && `https://drive.google.com/thumbnail?id=${encodeURIComponent(file.fileId!)}&sz=w1000`;
+    }
+
+    const allDay = (event: CalendarEvent) => !event.start.dateTime;
+    const startOf = (event: CalendarEvent) => new Date(event.start.dateTime ?? `${event.start.date}T00:00:00`);
+    const endOf = (event: CalendarEvent) => new Date(event.end.dateTime ?? `${event.end.date}T00:00:00`);
+    const clock = (date: Date) => date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+    // Calendar formats: UTC "20261001T123000Z" for timed events, "20261001" for all-day ones.
+    const utcStamp = (date: Date) => date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+    const dayStamp = (ymd: string) => ymd.replace(/-/g, '');
+    const calendarDates = (event: CalendarEvent) =>
+        allDay(event)
+            ? [dayStamp(event.start.date!), dayStamp(event.end.date!)]
+            : [utcStamp(startOf(event)), utcStamp(endOf(event))];
+
+    function googleCalendarUrl(event: CalendarEvent, details: string) {
+        const url = new URL('https://calendar.google.com/calendar/render');
+        url.search = new URLSearchParams({
+            action: 'TEMPLATE',
+            text: event.summary ?? 'CUDGS event',
+            dates: calendarDates(event).join('/'),
+            details,
+            location: event.location ?? '',
+        }).toString();
+        return url.toString();
+    }
+
+    function downloadIcs(event: CalendarEvent, details: string) {
+        const escape = (s: string) => s.replace(/[\\;,]/g, (c) => `\\${c}`).replace(/\n/g, '\\n');
+        const [start, end] = calendarDates(event);
+        const when = allDay(event) ? [`DTSTART;VALUE=DATE:${start}`, `DTEND;VALUE=DATE:${end}`] : [`DTSTART:${start}`, `DTEND:${end}`];
+        const ics = [
+            'BEGIN:VCALENDAR',
+            'VERSION:2.0',
+            'PRODID:-//CUDGS//Website//EN',
+            'BEGIN:VEVENT',
+            `UID:${event.id}@cudgs`,
+            `DTSTAMP:${utcStamp(new Date())}`,
+            ...when,
+            `SUMMARY:${escape(event.summary ?? 'CUDGS event')}`,
+            ...(event.location ? [`LOCATION:${escape(event.location)}`] : []),
+            ...(details ? [`DESCRIPTION:${escape(details)}`] : []),
+            'END:VEVENT',
+            'END:VCALENDAR',
+        ].join('\r\n');
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' }));
+        link.download = `${(event.summary ?? 'cudgs-event').replace(/[^\w-]+/g, '-').toLowerCase()}.ics`;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
     }
 
     const carousel = document.querySelector<HTMLElement>('.carousel')!;
@@ -83,20 +154,64 @@ const fallback = await getImage({ src: fallbackSrc, width: 800, format: 'webp' }
 
     function renderCard(event: CalendarEvent) {
         const card = template.content.firstElementChild!.cloneNode(true) as HTMLElement;
-        const allDay = !event.start.dateTime;
-        const date = new Date(event.start.dateTime ?? `${event.start.date}T00:00:00`);
-        const { image, text } = splitImage(toText(event.description ?? ''));
-        const img = card.querySelector('img')!;
-        img.src = image || carousel.dataset.fallback!;
-        img.addEventListener('error', () => { img.src = carousel.dataset.fallback!; }, { once: true });
+        const start = startOf(event);
+        const end = endOf(event);
+        const { links, text } = splitLinks(toText(event.description ?? ''));
+
+        const media = card.querySelector<HTMLElement>('.media')!;
+        const src = driveImage(event) || links.image;
+        if (src) {
+            const img = media.querySelector('img')!;
+            img.src = src;
+            // A broken or unshared picture drops the picture area rather than showing an empty box.
+            img.addEventListener('error', () => media.remove(), { once: true });
+        } else {
+            media.remove();
+        }
+
         card.querySelector('.name')!.textContent = event.summary || 'Untitled event';
-        card.querySelector('.date')!.textContent = date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-        card.querySelector('.time')!.textContent = allDay ? 'All day' : date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-        card.querySelector('.location')!.textContent = event.location || 'TBC';
-        const description = card.querySelector('.description')!;
+        card.querySelector('.date')!.textContent = start.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+        card.querySelector('.time')!.textContent = allDay(event)
+            ? 'All day'
+            : start.toDateString() === end.toDateString() ? `${clock(start)}–${clock(end)}` : clock(start);
+
+        // Show just the venue ("Sidney Sussex College"); the full address is the tooltip and map link.
+        const location = card.querySelector<HTMLAnchorElement>('.location')!;
+        if (event.location) {
+            card.querySelector('.place')!.textContent = event.location.split(',')[0].trim();
+            location.title = `${event.location} (opens Google Maps)`;
+            location.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`;
+        } else {
+            location.remove();
+        }
+
+        const description = card.querySelector<HTMLElement>('.description')!;
         if (text) description.textContent = text;
         else description.remove();
+
+        const signup = card.querySelector<HTMLAnchorElement>('.signup')!;
+        if (links.signup) {
+            signup.href = links.signup;
+            signup.hidden = false;
+        }
+        card.querySelector<HTMLAnchorElement>('.gcal')!.href = googleCalendarUrl(event, text);
+        card.querySelector('.ics')!.addEventListener('click', () => downloadIcs(event, text));
         return card;
+    }
+
+    // Long descriptions are cut to a few lines with a "More" toggle; this needs layout, so it
+    // runs once the cards are on the page.
+    function addMoreButtons() {
+        for (const card of track.querySelectorAll<HTMLElement>('.card')) {
+            const description = card.querySelector<HTMLElement>('.description');
+            const more = card.querySelector<HTMLButtonElement>('.more')!;
+            if (!description || description.scrollHeight <= description.clientHeight + 1) continue;
+            more.hidden = false;
+            more.addEventListener('click', () => {
+                const expanded = description.classList.toggle('expanded');
+                more.textContent = expanded ? 'Less' : 'More';
+            });
+        }
     }
 
     function updateArrows() {
@@ -127,7 +242,10 @@ const fallback = await getImage({ src: fallbackSrc, width: 800, format: 'webp' }
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const { items: upcoming = [] }: { items?: CalendarEvent[] } = await response.json();
         if (upcoming.length === 0) showStatus('No upcoming events right now. Check the Discord for news!');
-        else track.replaceChildren(...upcoming.map(renderCard));
+        else {
+            track.replaceChildren(...upcoming.map(renderCard));
+            requestAnimationFrame(addMoreButtons);
+        }
     } catch (error) {
         console.error('Error:', error);
         showStatus("Couldn't load events. Check the Discord for what's on!");
@@ -142,6 +260,7 @@ const fallback = await getImage({ src: fallbackSrc, width: 800, format: 'webp' }
 
     .track {
         display: flex;
+        align-items: flex-start;
         gap: 1rem;
         margin: 0;
         padding: 0.25rem 0 1rem;
@@ -157,7 +276,7 @@ const fallback = await getImage({ src: fallbackSrc, width: 800, format: 'webp' }
     }
 
     .card {
-        flex: 0 0 min(85%, 18rem);
+        flex: 0 0 min(85%, 20rem);
         scroll-snap-align: start;
         display: flex;
         flex-direction: column;
@@ -166,43 +285,20 @@ const fallback = await getImage({ src: fallbackSrc, width: 800, format: 'webp' }
         border-radius: 0.75rem;
         color: white;
         background: var(--black);
-        outline: none;
-    }
-
-    .card:focus-visible {
-        box-shadow: 0 0 0 3px var(--indigo);
     }
 
     .media {
-        position: relative;
         aspect-ratio: 16 / 9;
         overflow: hidden;
         border-radius: 0.5rem;
+        background: var(--cam-dark-blue);
     }
 
     .media img {
+        display: block;
         width: 100%;
         height: 100%;
         object-fit: cover;
-        display: block;
-    }
-
-    .description {
-        position: absolute;
-        inset: 0;
-        margin: 0;
-        padding: 0.75rem;
-        overflow-y: auto;
-        font-size: 0.7em;
-        white-space: pre-line;
-        background: rgb(14 17 22 / 0.92);
-        opacity: 0;
-        transition: opacity 0.2s;
-    }
-
-    .card:hover .description,
-    .card:focus-within .description {
-        opacity: 1;
     }
 
     .name {
@@ -222,10 +318,82 @@ const fallback = await getImage({ src: fallbackSrc, width: 800, format: 'webp' }
         display: inline-flex;
         align-items: center;
         gap: 0.4rem;
+        max-width: 100%;
         padding: 0.3rem 0.55rem;
         border-radius: 0.4rem;
+        color: inherit;
         background: rgb(255 255 255 / 0.15);
         white-space: nowrap;
+        text-decoration: none;
+    }
+
+    .place {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    a.chip:hover,
+    a.chip:focus-visible {
+        color: var(--black);
+        background: var(--cam-blue);
+    }
+
+    .description {
+        display: -webkit-box;
+        margin: 0;
+        overflow: hidden;
+        font-size: 0.65em;
+        line-height: 1.8;
+        white-space: pre-line;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 4;
+        line-clamp: 4;
+    }
+
+    .description.expanded {
+        display: block;
+    }
+
+    .more {
+        align-self: flex-start;
+        padding: 0;
+        border: 0;
+        font: inherit;
+        font-size: 0.6em;
+        color: var(--cam-blue);
+        background: none;
+        text-decoration: underline;
+        cursor: pointer;
+    }
+
+    .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        margin-top: auto;
+        font-size: 0.6em;
+    }
+
+    .action {
+        padding: 0.45rem 0.6rem;
+        border: 2px solid var(--cam-blue);
+        border-radius: 0.4rem;
+        font: inherit;
+        color: var(--cam-blue);
+        background: none;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    .action:hover,
+    .action:focus-visible,
+    .signup {
+        color: var(--black);
+        background: var(--cam-blue);
+    }
+
+    .signup[hidden] {
+        display: none;
     }
 
     svg {

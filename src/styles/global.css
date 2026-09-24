@@ -42,15 +42,13 @@ body {
     color: white;
 }
 
-/* Pinned to the viewport. Drawn at exactly half its 2000px size so the art's ~12px blocks
-   become ~6px, matching the pixel font. Wider screens repeat it along the mountains; taller
-   ones fill the top with the sky's own darkest colour. */
+/* Pinned to the viewport and scaled to cover it, so it never tiles on zoom or scroll. */
 body::before {
     content: "";
     position: fixed;
     inset: 0;
     z-index: -1;
-    background: #041c2b url('../assets/background.png') center bottom / 1000px 1000px repeat-x;
+    background: var(--night) url('../assets/background.png') center bottom / cover no-repeat;
     image-rendering: pixelated;
 }
 

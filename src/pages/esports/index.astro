@@ -1,0 +1,58 @@
+---
+import Base from '../../layouts/Base.astro';
+import SlantedSection from '../../components/SlantedSection.astro';
+import '../../styles/forms.css';
+import { games } from '../../data/esports.ts';
+---
+
+<Base title="Esports teams | CUDGS">
+    <SlantedSection title="Esports teams" variant="indigo">
+        <p class="lead">
+            CUDGS enters teams in the National Student Esports (NSE) and NUEL leagues. Log in with your University account
+            to apply, tell us which match weeks you can play, and come back to update your answers any time.
+        </p>
+        <ul class="list">
+            {games.map((g) => (
+                <li>
+                    <a class="btn" href={`/esports/${g.id}`}>{g.name}</a>
+                    <span class="leagues">{g.leagues.map((l) => `${l.name} ${l.day}`).join(' · ')}</span>
+                </li>
+            ))}
+        </ul>
+        <p class="small">More games are on the way. Ask your game rep on the Discord.</p>
+    </SlantedSection>
+</Base>
+
+<style>
+    .lead {
+        margin: 0 0 1.25rem;
+        font-size: 0.75rem;
+        line-height: 1.8;
+    }
+
+    .list {
+        display: grid;
+        gap: 1rem;
+        margin: 0 0 1rem;
+        padding: 0;
+        list-style: none;
+    }
+
+    .list li {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.8rem;
+    }
+
+    .leagues,
+    .small {
+        font-size: 0.6rem;
+        line-height: 1.6;
+        opacity: 0.9;
+    }
+
+    .small {
+        margin: 0;
+    }
+</style>

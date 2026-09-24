@@ -1,0 +1,176 @@
+---
+import Base from '../../../layouts/Base.astro';
+import SlantedSection from '../../../components/SlantedSection.astro';
+import '../../../styles/forms.css';
+import { findGame } from '../../../data/esports.ts';
+import {
+    canManage, effective, esportsEnabled, getSeason, listApplications, sheetUrl, tabId, upcomingWeeks,
+    type Application, type Season,
+} from '../../../lib/esports.ts';
+
+export const prerender = false;
+
+const game = findGame(Astro.params.game ?? '');
+if (!game) return new Response('Not found', { status: 404 });
+const { crsid } = Astro.locals;
+if (!crsid) return Astro.redirect(`/login?return=${encodeURIComponent(`/esports/${game.id}/responses`)}`);
+if (!canManage(crsid, game)) return new Response(`Only the ${game.name} reps can see responses.`, { status: 403 });
+Astro.response.headers.set('Cache-Control', 'private, no-store');
+
+let apps: Application[] = [];
+let season: Season = {};
+let gid: number | undefined;
+let failed = false;
+if (esportsEnabled()) {
+    try {
+        [apps, season, gid] = await Promise.all([listApplications(game), getSeason(game), tabId(game)]);
+    } catch (error) {
+        console.error('Esports responses failed:', error);
+        failed = true;
+    }
+}
+
+const summaryQuestions = game.questions.filter((q) => q.summary);
+const show = (v: string | string[] | undefined) => (Array.isArray(v) ? v.join(', ') : v || '–');
+// Players in a league: those who applied for it (or everyone, if the game doesn't ask).
+const inLeague = (leagueName: string) =>
+    apps.filter((a) => {
+        const v = a.answers.questions.leagues;
+        return !Array.isArray(v) || v.length === 0 || v.includes(leagueName);
+    });
+const who = (a: Application) => String(a.answers.questions.name || a.crsid);
+const discord = (a: Application) => String(a.answers.questions.discord || '');
+const byChoice = (players: Application[], league: string, week: number) => {
+    const groups = { Available: [] as string[], Maybe: [] as string[], Unavailable: [] as string[], 'No answer': [] as string[] };
+    for (const a of players) {
+        const e = effective(a.answers, league, week);
+        const label = `${who(a)}${e.usual ? ' (usual)' : ''}`;
+        if (e.value) groups[e.value].push(label);
+        else groups['No answer'].push(`${who(a)}${discord(a) ? ` (@${discord(a)})` : ''}`);
+    }
+    return groups;
+};
+const formatDay = (iso: string) =>
+    new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+---
+
+<Base title={`${game.name} responses | CUDGS`}>
+    <SlantedSection title={`${game.name} responses`} variant="indigo">
+        <p class="small">
+            {apps.length} application{apps.length === 1 ? '' : 's'}.
+            {esportsEnabled() && <><a href={sheetUrl(game, gid)} rel="noopener" target="_blank">Open the sheet</a> · </>}
+            <a href={`/esports/${game.id}/manage`}>Season dates</a> · <a href={`/esports/${game.id}`}>Application form</a>
+        </p>
+        {failed && <p>We couldn't load the responses just now. Please try again in a few minutes.</p>}
+        {apps.length > 0 && (
+            <div class="table-wrap">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>CRSid</th>
+                            {summaryQuestions.map((q) => <th>{q.heading}</th>)}
+                            <th>Updated</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {apps.map((a) => (
+                            <tr>
+                                <td>{a.crsid}</td>
+                                {summaryQuestions.map((q) => <td>{q.type === 'confirm' ? (a.answers.questions[q.id] ? 'Yes' : '–') : show(a.answers.questions[q.id])}</td>)}
+                                <td>{a.updated || a.submitted}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        )}
+    </SlantedSection>
+
+    {game.leagues.some((l) => upcomingWeeks(season, l.id).length > 0) && (
+        <SlantedSection title="Availability" variant="indigo">
+            <p class="small">
+                "(usual)" means the player didn't answer that week, so their usual answer is used. Players update theirs at
+                <strong> cudgs.org/availability</strong>: share that link with anyone under "No answer".
+            </p>
+            {game.leagues.map((l) => {
+                const weeks = upcomingWeeks(season, l.id);
+                if (!weeks.length) return null;
+                const players = inLeague(l.name);
+                const next = weeks[0];
+                const groups = byChoice(players, l.id, next.week);
+                return (
+                    <>
+                        <h3>{l.name} next match: week {next.week}, {formatDay(next.date)}</h3>
+                        <div class="next">
+                            {Object.entries(groups).map(([label, names]) => (
+                                <div class:list={['group', label === 'No answer' && 'missing']}>
+                                    <strong>{label} ({names.length})</strong>
+                                    <span>{names.join(', ') || '–'}</span>
+                                </div>
+                            ))}
+                        </div>
+                        <div class="table-wrap">
+                            <table class="table">
+                                <thead>
+                                    <tr><th>Upcoming week</th><th>Available</th><th>Maybe</th><th>Unavailable</th><th>No answer</th></tr>
+                                </thead>
+                                <tbody>
+                                    {weeks.map(({ week, date }) => {
+                                        const g = byChoice(players, l.id, week);
+                                        return (
+                                            <tr>
+                                                <td>{week} · {formatDay(date)}</td>
+                                                <td title={g.Available.join(', ')}>{g.Available.length}</td>
+                                                <td title={g.Maybe.join(', ')}>{g.Maybe.length}</td>
+                                                <td title={g.Unavailable.join(', ')}>{g.Unavailable.length}</td>
+                                                <td title={g['No answer'].join(', ')}>{g['No answer'].length}</td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </>
+                );
+            })}
+        </SlantedSection>
+    )}
+</Base>
+
+<style>
+    .small {
+        margin: 0 0 1rem;
+        font-size: 0.65rem;
+        line-height: 1.7;
+    }
+
+    a {
+        color: inherit;
+    }
+
+    h3 {
+        margin: 1rem 0 0.5rem;
+        font-size: 0.8rem;
+    }
+
+    .next {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+        gap: 0.6rem;
+        margin-bottom: 1rem;
+    }
+
+    .group {
+        display: grid;
+        gap: 0.3rem;
+        padding: 0.6rem 0.75rem;
+        border-radius: 0.5rem;
+        background: rgb(14 17 22 / 0.5);
+        font-size: 0.6rem;
+        line-height: 1.6;
+    }
+
+    .group.missing {
+        border: 2px solid #ffb4b4;
+    }
+</style>

@@ -1,0 +1,47 @@
+// Games shown streaming down the Games section. Add or remove a line to change the list; it is
+// sorted alphabetically and de-duplicated automatically, and the scroll speed stays the same.
+export const games: string[] = [
+    'Age of Empires',
+    'Among Us',
+    'Apex Legends',
+    "Baldur's Gate 3",
+    'Battlefield',
+    'Bloons TD',
+    'Call of Duty',
+    'Clash Royale',
+    'Counter-Strike 2',
+    'Deadlock',
+    'Dota 2',
+    'Fighting games',
+    'Geometry Dash',
+    'GeoGuessr',
+    'Hearthstone',
+    'Helldivers 2',
+    'Genshin Impact',
+    'Honkai: Star Rail',
+    'Zenless Zone Zero',
+    'League of Legends',
+    'Lethal Company',
+    'Mario Kart',
+    'Marvel Rivals',
+    'Minecraft',
+    'Overwatch',
+    'Pokémon',
+    'Rainbow Six Siege',
+    'Rhythm games',
+    'Rocket League',
+    'Smite',
+    'Soulslikes',
+    'Splatoon',
+    'Strategy / RTS',
+    'Teamfight Tactics',
+    'Tetris',
+    'Valorant',
+];
+
+// Where the big Games button goes.
+export const gamesLink = {
+    href: 'https://discord.gg/P2TthJCgu2',
+    label: 'Find people to play with',
+    sub: 'Join the CUDGS Discord',
+};

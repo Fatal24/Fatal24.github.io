@@ -1,0 +1,71 @@
+---
+// Match-week availability for one game: a "usually" answer per league plus upcoming weeks only.
+// Weeks left blank follow the usual answer, so players only need to mark the exceptions.
+import { availabilityChoices, type Game } from '../data/esports.ts';
+import { upcomingWeeks, type Answers, type Season } from '../lib/esports.ts';
+
+interface Props {
+    game: Game;
+    season: Season;
+    answers?: Answers;
+}
+
+const { game, season, answers } = Astro.props;
+const formatDay = (iso: string) =>
+    new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+---
+
+{game.leagues.map((l) => {
+    const weeks = upcomingWeeks(season, l.id);
+    const usual = answers?.usual[l.id];
+    return (
+        <div class="weeks">
+            <p class="help"><strong>{l.name}</strong>: {l.day}, {l.time} ({l.format})</p>
+            <fieldset class="week usual-row">
+                <legend>Usually</legend>
+                <div class="chips">
+                    {availabilityChoices.map((c) => (
+                        <label class="chip-choice">
+                            <input type="radio" name={`u_${l.id}`} value={c} checked={usual === c} />
+                            <span>{c}</span>
+                        </label>
+                    ))}
+                </div>
+            </fieldset>
+            {weeks.length === 0 ? (
+                <p class="help">No upcoming {l.name} dates yet: your usual answer will be used once the reps add them.</p>
+            ) : (
+                weeks.map(({ week, date }) => {
+                    const explicit = answers?.weeks[`${l.id}:${week}`];
+                    return (
+                        <fieldset class="week">
+                            <legend>
+                                Week {week}: {formatDay(date)}
+                                {!explicit && usual && <span class="follows"> (usual: {usual})</span>}
+                            </legend>
+                            <div class="chips">
+                                {availabilityChoices.map((c) => (
+                                    <label class="chip-choice">
+                                        <input type="radio" name={`w_${l.id}_${week}`} value={c} checked={explicit === c} />
+                                        <span>{c}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </fieldset>
+                    );
+                })
+            )}
+        </div>
+    );
+})}
+
+<style>
+    .usual-row {
+        padding-bottom: 0.6rem;
+        border-bottom: 1px dashed rgb(142 232 216 / 0.4);
+    }
+
+    .follows {
+        opacity: 0.7;
+    }
+</style>

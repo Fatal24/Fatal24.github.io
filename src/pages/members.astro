@@ -3,6 +3,7 @@ import Base from '../layouts/Base.astro';
 import SlantedSection from '../components/SlantedSection.astro';
 import { findMember, type Member } from '../lib/members.ts';
 import { joinUrl, perks } from '../data/perks.ts';
+import { COLLEGES, getSubscription, mailingListEnabled, type Subscription } from '../lib/mailing-list.ts';
 
 export const prerender = false;
 
@@ -18,10 +19,33 @@ try {
     lookupFailed = true;
 }
 
+// Mailing list status (anyone logged in can join, member or not).
+let subscription: Subscription | null = null;
+let mailingFailed = false;
+if (mailingListEnabled()) {
+    try {
+        subscription = await getSubscription(crsid);
+    } catch (error) {
+        console.error('Mailing list lookup failed:', error);
+        mailingFailed = true;
+    }
+}
+const MAILING_MESSAGES: Record<string, string> = {
+    joined: "You're on the mailing list. Welcome!",
+    already: "You're already on the mailing list.",
+    left: "You've been removed from the mailing list.",
+    noname: 'Please enter your name to join.',
+    error: "Sorry, we couldn't update the mailing list just now. Please try again in a few minutes.",
+};
+const mailingMessage = MAILING_MESSAGES[Astro.url.searchParams.get('mailing') ?? ''];
+
 Astro.response.headers.set('Cache-Control', 'private, no-store');
 
 const formatDate = (date: Date) => date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-const visiblePerks = member?.active ? perks.filter((perk) => !perk.tiers || perk.tiers.includes(member!.tier)) : [];
+// Perks still marked "TODO:" in src/data/perks.ts are placeholders and stay hidden.
+const visiblePerks = member?.active
+    ? perks.filter((perk) => !perk.body.startsWith('TODO') && (!perk.tiers || perk.tiers.includes(member!.tier)))
+    : [];
 ---
 
 <Base title="Members | CUDGS">
@@ -41,8 +65,18 @@ const visiblePerks = member?.active ? perks.filter((perk) => !perk.tiers || perk
             <dl>
                 <dt>Type</dt>
                 <dd>{member.tier}</dd>
-                <dt>Valid until</dt>
-                <dd>{member.expires ? formatDate(member.expires) : 'No expiry'}</dd>
+                {member.expires && (
+                    <>
+                        <dt>Valid until</dt>
+                        <dd>{formatDate(member.expires)}</dd>
+                    </>
+                )}
+                {member.since && (
+                    <>
+                        <dt>Member since</dt>
+                        <dd>{formatDate(member.since)}</dd>
+                    </>
+                )}
             </dl>
         )}
 
@@ -53,6 +87,43 @@ const visiblePerks = member?.active ? perks.filter((perk) => !perk.tiers || perk
             </>
         )}
     </SlantedSection>
+
+    {mailingListEnabled() && (
+        <SlantedSection title="Mailing list" variant="indigo">
+            <div id="mailing-list" class="mailing">
+                {mailingMessage && <p class="notice" role="status">{mailingMessage}</p>}
+                {mailingFailed && <p>We couldn't check the mailing list just now. Please try again in a few minutes.</p>}
+                {!mailingFailed && subscription && (
+                    <form method="post" action="/api/mailing-list">
+                        <p>
+                            You're on the CUDGS mailing list as <strong>{subscription.name || crsid}</strong>
+                            {subscription.college && <> ({subscription.college})</>}. Emails go to your University address.
+                        </p>
+                        <input type="hidden" name="action" value="leave" />
+                        <button class="button" type="submit">Unsubscribe</button>
+                    </form>
+                )}
+                {!mailingFailed && !subscription && (
+                    <form method="post" action="/api/mailing-list" class="join">
+                        <p>Hear about events, tournaments and socials first. Emails go to your University address ({crsid}@cam.ac.uk).</p>
+                        <input type="hidden" name="action" value="join" />
+                        <label>
+                            <span>Name</span>
+                            <input name="name" required maxlength="80" autocomplete="name" value={member?.name ?? ''} />
+                        </label>
+                        <label>
+                            <span>College <em>(optional)</em></span>
+                            <select name="college">
+                                <option value="">Prefer not to say</option>
+                                {COLLEGES.map((college) => <option>{college}</option>)}
+                            </select>
+                        </label>
+                        <button class="button" type="submit">Join the mailing list</button>
+                    </form>
+                )}
+            </div>
+        </SlantedSection>
+    )}
 
     {visiblePerks.length > 0 && (
         <SlantedSection title="Perks" variant="indigo">
@@ -100,5 +171,63 @@ const visiblePerks = member?.active ? perks.filter((perk) => !perk.tiers || perk
     h3 {
         margin: 0 0 0.5rem;
         font-size: 0.9rem;
+    }
+
+    .notice {
+        padding: 0.6rem 0.8rem;
+        border-left: 4px solid var(--cam-blue);
+        background: rgb(14 17 22 / 0.35);
+    }
+
+    .join {
+        display: grid;
+        gap: 1rem;
+        max-width: 30rem;
+    }
+
+    label {
+        display: grid;
+        gap: 0.4rem;
+    }
+
+    label em {
+        font-style: normal;
+        opacity: 0.75;
+    }
+
+    input,
+    select {
+        padding: 0.6rem 0.7rem;
+        border: 2px solid var(--cam-blue);
+        border-radius: 0.5rem;
+        font: inherit;
+        font-size: 0.7rem;
+        color: white;
+        background: rgb(14 17 22 / 0.7);
+    }
+
+    input:focus-visible,
+    select:focus-visible {
+        outline: 3px solid white;
+        outline-offset: 2px;
+    }
+
+    .button {
+        justify-self: start;
+        padding: 0.6rem 0.9rem;
+        border: 2px solid var(--cam-blue);
+        border-radius: 0.5rem;
+        font: inherit;
+        font-size: 0.7rem;
+        color: var(--cam-blue);
+        background: rgb(14 17 22 / 0.6);
+        cursor: pointer;
+        transition: background-color 0.2s, color 0.2s;
+    }
+
+    .button:hover,
+    .button:focus-visible {
+        color: var(--black);
+        background: var(--cam-blue);
     }
 </style>

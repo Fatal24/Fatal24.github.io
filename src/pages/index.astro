@@ -4,6 +4,7 @@ import SlantedSection from '../components/SlantedSection.astro';
 import Events from '../components/Events.astro';
 import Committee from '../components/Committee.astro';
 import Sponsors from '../components/Sponsors.astro';
+import Games from '../components/Games.astro';
 import logo from '../assets/logo-text.svg?raw';
 import redbullPhoto from '../assets/photos/varsity-2025-redbull.jpg';
 import playerPhoto from '../assets/photos/varsity-player.jpg';
@@ -14,6 +15,7 @@ import gamesPoster from '../assets/photos/games-poster.jpg';
 const socials = [
     { label: 'CUDGS on Instagram', href: 'https://www.instagram.com/camdigitalgaming', gif: 'icons/instagram.gif' },
     { label: 'Join the CUDGS Discord server', href: 'https://discord.gg/P2TthJCgu2', gif: 'icons/discord.gif' },
+    { label: 'Contact CUDGS', href: import.meta.env.BASE_URL + 'contact', gif: 'icons/mail.gif' },
 ];
 ---
 
@@ -44,19 +46,49 @@ const socials = [
 
     <!-- 12s loop from obby's "mmmmmmm valorant" (youtu.be/BK8cz1E9Qic), from 0:41.6, no audio. -->
     <SlantedSection title="Games" variant="indigo" video="videos/games.mp4" poster={gamesPoster}>
-        <ul class="games">
-            <li>Overwatch</li>
-            <li>Valorant</li>
-            <li>CS2</li>
-            <li>Minecraft</li>
-        </ul>
+        <Games />
     </SlantedSection>
 
     <SlantedSection title="About Us">
-        <p>
-            Bringing gamers together since 2011, CUDGS is Cambridge's largest gaming society — join our Discord now
-            and meet new players from across the University (open to students of any and all gaming backgrounds).
-        </p>
+        <div class="about">
+            <p>
+                Founded in the summer of 2011, the Cambridge University Digital Gaming Society is the University's
+                largest student society for competitive and casual video gaming, and the hub for gaming and esports
+                in Cambridge. Everyone is welcome, whatever and however you play.
+            </p>
+
+            <h3>Esports &amp; Varsity</h3>
+            <p>
+                We field competitive teams in Counter-Strike 2, League of Legends, Overwatch 2, Valorant and Marvel
+                Rivals, competing nationally in leagues including National Student Esports (NSE), partnered with
+                BUCS, and NUEL. Every year we take on the University of Oxford in person at the Oxbridge Esports
+                Varsity, at venues such as the Red Bull Gaming Sphere, the Insomnia Gaming Festival and Jesus
+                College, Oxford.
+            </p>
+
+            <h3>Casual gaming</h3>
+            <p>
+                Community game nights for every student, with Mario Kart, Jackbox, Among Us and plenty more. No
+                experience or rank required.
+            </p>
+
+            <h3>Socials</h3>
+            <p>
+                In-person socials throughout the year: LAN parties, pub quizzes, themed charity events, formal halls,
+                a Christmas dinner and Nintendo Day.
+            </p>
+
+            <h3>Working with other societies</h3>
+            <p>
+                We team up with other Cambridge societies on events, including the rhythm games society, PokeSoc
+                (the Pokémon society) and Cambridge Battlecode.
+            </p>
+
+            <p class="cta">
+                Join our <a href="https://discord.gg/P2TthJCgu2">Discord</a> to meet players from across the
+                University, or <a href={import.meta.env.BASE_URL + 'contact'}>get in touch</a>.
+            </p>
+        </div>
     </SlantedSection>
 
     <SlantedSection title="Committee" variant="indigo" image={playerPhoto}>
@@ -179,13 +211,26 @@ const socials = [
         background-color: white;
     }
 
-    .games {
-        margin: 0;
-        padding-left: 1.5rem;
-        list-style: square;
-    }
-
     p {
         margin: 0;
+    }
+
+    .about {
+        display: grid;
+        gap: 0.9rem;
+    }
+
+    .about h3 {
+        margin: 0.6rem 0 0;
+        font-size: 0.85rem;
+    }
+
+    .about a {
+        color: inherit;
+        font-weight: bold;
+    }
+
+    .cta {
+        margin-top: 0.5rem;
     }
 </style>

@@ -35,9 +35,29 @@ globalThis.fetch = (async (input: string | URL) => {
 
 const { findMember } = await import('./members.ts');
 
+test('the optional Acquired column becomes "member since"; a bad date is ignored', async () => {
+    const saved = globalThis.fetch;
+    globalThis.fetch = (async (input: string | URL) =>
+        String(input).startsWith('https://oauth2.googleapis.com/token')
+            ? Response.json({ access_token: 'token', expires_in: 3600 })
+            : Response.json({
+                  values: [
+                      ['CRSid', 'Name', 'Membership', 'Acquired', 'Expires'],
+                      ['zz999', 'Rae Kim', 'Lifetime', '2024-10-01', ''],
+                      ['yy888', 'Ola Nwosu', 'Standard', 'last year', '2099-01-01'],
+                  ],
+              })) as typeof fetch;
+    const { findMember: fresh } = await import('./members.ts?acquired');
+    const rae = await fresh('ZZ999');
+    assert.equal(rae?.since?.toISOString().slice(0, 10), '2024-10-01');
+    assert.equal(rae?.expires, null);
+    assert.equal((await fresh('yy888'))?.since, null);
+    globalThis.fetch = saved;
+});
+
 test('matches CRSids case-insensitively; blank expiry never expires', async () => {
     assert.deepEqual(await findMember('ab123'), {
-        crsid: 'ab123', name: 'Alex Smith', tier: 'Lifetime', expires: null, active: true,
+        crsid: 'ab123', name: 'Alex Smith', tier: 'Lifetime', expires: null, since: null, active: true,
     });
 });
 
@@ -56,5 +76,5 @@ test('blank membership type defaults to "Member"', async () => {
 test('unknown CRSid is null, and the sheet is cached between lookups', async () => {
     assert.equal(await findMember('zz999'), null);
     assert.equal(requests.filter((url) => url.includes('sheets.googleapis.com')).length, 1);
-    assert.ok(requests[1].includes('/spreadsheets/sheet123/values/Members!A%3AD'));
+    assert.ok(requests.find((url) => url.includes('sheets.googleapis.com'))!.includes('/spreadsheets/sheet123/values/Members!A%3AD'));
 });
